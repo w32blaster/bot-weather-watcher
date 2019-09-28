@@ -3,7 +3,7 @@ package structs
 import "time"
 
 type (
-	Root struct {
+	RootSiteRep struct {
 		SiteRep SiteRep `json:"SiteRep"`
 	}
 
@@ -43,5 +43,21 @@ type (
 		Type  string            `json:"type"`
 		Value string            `json:"value"`
 		Rep   map[string]string `json:"Rep"`
+	}
+
+	RootLocations struct {
+		Location []SiteLocation `json:"Location"`
+	}
+
+	SiteLocation struct {
+		ID           string  `json:"id"`
+		Elevation    float32 `json:"elevation"`
+		Latitude     float32 `json:"latitude"`
+		Longitude    float32 `json:"longitude"`
+		Name         string  `json:"name"`
+		Region       string  `json:"region"`
+		AuthAread    string  `json:"unitaryAuthArea"`
+		NationalPart string  `json:"nationalPark"`
+		ObsSource    string  `json:"obsSource"`
 	}
 )
