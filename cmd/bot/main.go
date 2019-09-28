@@ -52,7 +52,10 @@ func main() {
 
 					// user selected some inline query here
 					//commands.OnStationSelected(bot, update.Message.Chat.ID, update.Message.From.ID, update.Message.Text, &opts)
+				} else {
 
+					// just a plain text
+					command.ProcessPlainText(bot, update.Message)
 				}
 			}
 

@@ -1,6 +1,7 @@
 package command
 
 import (
+	"github.com/asdine/storm"
 	tgbotapi "gopkg.in/telegram-bot-api.v4"
 	"html"
 	"log"
@@ -40,10 +41,37 @@ func ProcessCommands(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 			 /deleteall - delete all saved places`
 		sendMsg(bot, chatID, html.EscapeString(help))
 
+	case "add":
+
 	default:
 		sendMsg(bot, chatID, "Sorry, I don't recognize such command: "+command+", please call /help to get full list of commands I understand")
 	}
 
+}
+
+func StartProcessAddingNewLocation() {
+
+}
+
+func ProcessPlainText(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
+	db, err := storm.Open("my.db")
+	defer db.Close()
+
+	if err != nil {
+		sendMsg(bot, message.Chat.ID, "Ouch, this is internal error, sorry")
+		log.Println("Error opening the database, err: " + err.Error())
+		return
+	}
+
+	stateMachine, err := LoadStateMachineFor(message.From.ID, db)
+	if err != nil {
+		sendMsg(bot, message.Chat.ID, "Ouch, this is internal error, sorry")
+		log.Println("Error opening the database, err: " + err.Error())
+		return
+	}
+
+	msg := stateMachine.NextState(message.Text)
+	sendMsg(bot, message.Chat.ID, msg)
 }
 
 // properly extracts command from the input string, removing all unnecessary parts

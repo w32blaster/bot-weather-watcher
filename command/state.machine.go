@@ -1,5 +1,10 @@
 package command
 
+import (
+	"github.com/asdine/storm"
+	"github.com/w32blaster/bot-weather-watcher/structs"
+)
+
 const (
 	StepEnterLocation     = 1
 	StepEnterMaxWindSpeed = 2
@@ -14,8 +19,9 @@ type (
 	}
 
 	StateMachine struct {
-		UserID       string
+		UserID       int
 		currentState int
+		db           *storm.DB
 	}
 )
 
@@ -45,12 +51,20 @@ var states = map[int]state{
 	},
 }
 
-func LoadStateMachineFor(userID string) *StateMachine {
+func LoadStateMachineFor(userID int, stormDb *storm.DB) (*StateMachine, error) {
 
-	return &StateMachine{
-		UserID:       userID,
-		currentState: loadState(userID), // load from Db
+	sm := StateMachine{
+		UserID: userID,
+		db:     stormDb,
 	}
+
+	currState, err := sm.loadState(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	sm.currentState = currState
+	return &sm, nil
 }
 
 // Move to the next state, updates internal state in case of success;
@@ -60,7 +74,13 @@ func (sm *StateMachine) NextState(rawMessage string) string {
 	return state.fnProcess(rawMessage)
 }
 
-func loadState(userID string) int {
+func (sm *StateMachine) loadState(userID int) (int, error) {
+
 	// load state from DB
-	return -1
+	var state structs.UserState
+	if err := sm.db.One("UserID", userID, &state); err != nil {
+		return -1, err
+	}
+
+	return state.CurrentState, nil
 }
