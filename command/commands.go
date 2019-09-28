@@ -31,11 +31,13 @@ func ProcessCommands(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 
 		help := `This bot supports the following commands:
 		     /start - shows start message
-			 /help - Help
-			 /bookmarks - prints saved trips
+			 /help - this command
+			 /add - add new place to watch
+			 /now - collect the weather at current moment for all the saved places
+             /forecast - show the forecast for all saved places within 3 days
 			 /about - information about this bot
 			 /reset - reset the inner state for current user
-			 /deleteall - delete all saved bookmarks`
+			 /deleteall - delete all saved places`
 		sendMsg(bot, chatID, html.EscapeString(help))
 
 	default:
