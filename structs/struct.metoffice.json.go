@@ -13,7 +13,7 @@ type (
 	}
 
 	Wx struct {
-		params []WxParam `json:"Param"`
+		Params []WxParam `json:"Param"`
 	}
 
 	WxParam struct {
@@ -30,9 +30,9 @@ type (
 
 	Location struct {
 		ID        string   `json:"i"`
-		Latitude  float32  `json:"lat"`
-		Longitude float32  `json:"lon"`
-		Elevation float32  `json:"elevation"`
+		Latitude  string   `json:"lat"`
+		Longitude string   `json:"lon"`
+		Elevation string   `json:"elevation"`
 		Name      string   `json:"name"`
 		Country   string   `json:"country"`
 		Continent string   `json:"continent"`
@@ -40,9 +40,9 @@ type (
 	}
 
 	Period struct {
-		Type  string            `json:"type"`
-		Value string            `json:"value"`
-		Rep   map[string]string `json:"Rep"`
+		Type  string              `json:"type"`
+		Value string              `json:"value"`
+		Rep   []map[string]string `json:"Rep"`
 	}
 
 	RootLocations struct {
@@ -50,14 +50,14 @@ type (
 	}
 
 	SiteLocation struct {
-		ID           string  `json:"id"`
-		Elevation    float32 `json:"elevation"`
-		Latitude     float32 `json:"latitude"`
-		Longitude    float32 `json:"longitude"`
-		Name         string  `json:"name"`
-		Region       string  `json:"region"`
-		AuthAread    string  `json:"unitaryAuthArea"`
-		NationalPart string  `json:"nationalPark"`
-		ObsSource    string  `json:"obsSource"`
+		ID           string `json:"id"`
+		Elevation    string `json:"elevation"`
+		Latitude     string `json:"latitude"`
+		Longitude    string `json:"longitude"`
+		Name         string `json:"name"`
+		Region       string `json:"region"`
+		AuthAread    string `json:"unitaryAuthArea"`
+		NationalPart string `json:"nationalPark"`
+		ObsSource    string `json:"obsSource"`
 	}
 )
