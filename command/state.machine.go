@@ -86,8 +86,8 @@ func (sm *StateMachine) loadState(userID int) (int, error) {
 			UserID:       userID,
 			CurrentState: StepEnterLocation,
 		}
-		if err := sm.db.Save(state); err != nil {
-			fmt.Printf("attempt to create a new state and persist in the database, but error occurred: %s", err.Error())
+		if err := sm.db.Save(&state); err != nil {
+			fmt.Printf("attempt to create a new state and persist in the database, but error occurred: %s \n", err.Error())
 			return -1, err
 		}
 	}

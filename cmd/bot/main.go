@@ -6,21 +6,18 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/caarlos0/env"
 	"github.com/w32blaster/bot-weather-watcher/command"
-
-	//flags "github.com/jessevdk/go-flags"
-	//_ "github.com/joho/godotenv/autoload"
 	"gopkg.in/telegram-bot-api.v4"
 )
 
 func main() {
 
-	// get the command line arguments and parse them
+	// get ENV VAR
 	var opts = structs.Opts{}
-	//_, err := flags.Parse(&opts)
-	//if err != nil {
-	//	panic(err)
-	//}
+	if err := env.Parse(&opts); err != nil {
+		panic("Can't parse ENV VARS: " + err.Error())
+	}
 
 	bot, err := tgbotapi.NewBotAPI(opts.BotToken)
 	if err != nil {
