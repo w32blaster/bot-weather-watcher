@@ -46,18 +46,22 @@ type (
 	}
 
 	RootLocations struct {
+		Locations SiteLocations `json:"Locations"`
+	}
+
+	SiteLocations struct {
 		Location []SiteLocation `json:"Location"`
 	}
 
 	SiteLocation struct {
-		ID           string `json:"id"`
+		ID           string `json:"id" storm:"unique"`
 		Elevation    string `json:"elevation"`
 		Latitude     string `json:"latitude"`
 		Longitude    string `json:"longitude"`
-		Name         string `json:"name"`
+		Name         string `json:"name" storm:"index"`
 		Region       string `json:"region"`
-		AuthAread    string `json:"unitaryAuthArea"`
-		NationalPart string `json:"nationalPark"`
+		AuthArea     string `json:"unitaryAuthArea" storm:"index"`
+		NationalPart string `json:"nationalPark" storm:"index"`
 		ObsSource    string `json:"obsSource"`
 	}
 )

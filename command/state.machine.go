@@ -1,6 +1,7 @@
 package command
 
 import (
+	"fmt"
 	"github.com/asdine/storm"
 	"github.com/w32blaster/bot-weather-watcher/structs"
 )
@@ -79,7 +80,16 @@ func (sm *StateMachine) loadState(userID int) (int, error) {
 	// load state from DB
 	var state structs.UserState
 	if err := sm.db.One("UserID", userID, &state); err != nil {
-		return -1, err
+
+		// existing state is not found, create a new one
+		state = structs.UserState{
+			UserID:       userID,
+			CurrentState: StepEnterLocation,
+		}
+		if err := sm.db.Save(state); err != nil {
+			fmt.Printf("attempt to create a new state and persist in the database, but error occurred: %s", err.Error())
+			return -1, err
+		}
 	}
 
 	return state.CurrentState, nil

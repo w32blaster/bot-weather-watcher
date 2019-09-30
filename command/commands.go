@@ -8,6 +8,10 @@ import (
 	"strings"
 )
 
+const (
+	DbPath = "weather.db"
+)
+
 // ProcessCommands acts when user sent to a bot some command, for example "/command arg1 arg2"
 func ProcessCommands(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 
@@ -42,6 +46,7 @@ func ProcessCommands(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 		sendMsg(bot, chatID, html.EscapeString(help))
 
 	case "add":
+		StartProcessAddingNewLocation(bot, message)
 
 	default:
 		sendMsg(bot, chatID, "Sorry, I don't recognize such command: "+command+", please call /help to get full list of commands I understand")
@@ -49,12 +54,29 @@ func ProcessCommands(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 
 }
 
-func StartProcessAddingNewLocation() {
+// Initiate the process of adding a new location, create a new state
+func StartProcessAddingNewLocation(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
+	db, err := storm.Open(DbPath)
+	if err != nil {
+		log.Printf("Error! Can't open the database, the error is %s", err.Error())
+		sendMsg(bot, message.Chat.ID, "Sorry, internal error occurred, can't open a database. Please try again later.")
+		return
+	}
 
+	defer db.Close()
+	if _, err = LoadStateMachineFor(message.From.ID, db); err != nil {
+		log.Printf("Can't initiate a state machine. Error is %s", err.Error())
+		sendMsg(bot, message.Chat.ID, "Sorry, internal error occurred, please trt again later")
+		return
+	}
+
+	sendMsg(bot, message.Chat.ID, "Ok, let's add a location where you want to monitor a weather. "+
+		"Start typing name and suggestions will appear.")
 }
 
+// Process a general text. The context should be retrieved from state machine
 func ProcessPlainText(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
-	db, err := storm.Open("my.db")
+	db, err := storm.Open(DbPath)
 	defer db.Close()
 
 	if err != nil {
