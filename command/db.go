@@ -1,5 +1,5 @@
 package command
 
-func InitDatabase() {
+func GetStationListByPattern() {
 
 }

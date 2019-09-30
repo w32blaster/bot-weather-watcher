@@ -1,7 +1,9 @@
 package command
 
 import (
+	"fmt"
 	"github.com/asdine/storm"
+	"github.com/w32blaster/bot-weather-watcher/structs"
 	tgbotapi "gopkg.in/telegram-bot-api.v4"
 	"html"
 	"log"
@@ -94,6 +96,46 @@ func ProcessPlainText(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 
 	msg := stateMachine.NextState(message.Text)
 	sendMsg(bot, message.Chat.ID, msg)
+}
+
+func ProcessInlineQuery(bot *tgbotapi.BotAPI, inlineQuery *tgbotapi.InlineQuery) {
+	db, err := storm.Open(DbPath)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	defer db.Close()
+
+	// firstly, make query to TFL
+	searchQuery := inlineQuery.Query
+	var locations []structs.SiteLocation
+	db.Prefix("Name", searchQuery, &locations)
+
+	var answers []interface{}
+
+	for _, loc := range locations {
+
+		// Build one line for inline answer (one result)
+		strLocID := fmt.Sprint(loc.ID)
+		answer := tgbotapi.NewInlineQueryResultArticleHTML(strLocID, loc.Name, "Selected Location: "+strLocID)
+		descr := loc.AuthArea + ", " + strings.ToUpper(loc.Region) + ", UK"
+		if len(loc.NationalPark) > 0 {
+			descr = loc.NationalPark + ", " + descr
+		}
+		answer.Description = html.EscapeString(descr)
+
+		answers = append(answers, answer)
+	}
+
+	answer := tgbotapi.InlineConfig{
+		InlineQueryID: inlineQuery.ID,
+		CacheTime:     3,
+		Results:       answers,
+	}
+
+	if resp, err := bot.AnswerInlineQuery(answer); err != nil {
+		log.Fatal("ERROR! bot.answerInlineQuery:", err, resp)
+	}
 }
 
 // properly extracts command from the input string, removing all unnecessary parts

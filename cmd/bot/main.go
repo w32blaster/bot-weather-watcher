@@ -67,7 +67,7 @@ func main() {
 		} else if update.InlineQuery != nil {
 
 			// this is inline query (it's like a suggestion while typing)
-			// commands.ProcessInlineQuery(bot, update.InlineQuery, &opts)
+			command.ProcessInlineQuery(bot, update.InlineQuery)
 		}
 
 	}

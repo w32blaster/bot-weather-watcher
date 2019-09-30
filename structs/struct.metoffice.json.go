@@ -61,7 +61,7 @@ type (
 		Name         string `json:"name" storm:"index"`
 		Region       string `json:"region"`
 		AuthArea     string `json:"unitaryAuthArea" storm:"index"`
-		NationalPart string `json:"nationalPark" storm:"index"`
+		NationalPark string `json:"nationalPark" storm:"index"`
 		ObsSource    string `json:"obsSource"`
 	}
 )
