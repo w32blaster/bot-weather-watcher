@@ -97,7 +97,7 @@ func ProcessPlainText(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 		return
 	}
 
-	msg := stateMachine.NextState(message.Text)
+	msg := stateMachine.ProcessNextState(message.Text)
 	sendMsg(bot, message.Chat.ID, msg)
 }
 
