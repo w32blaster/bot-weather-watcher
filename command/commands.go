@@ -57,10 +57,28 @@ func ProcessCommands(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 	case "locations":
 		PrintSavedLocations(bot, chatID, message.From.ID)
 
+	case "deleteall":
+		DeleteLocations(bot, message)
+
 	default:
 		sendMsg(bot, chatID, "Sorry, I don't recognize such command: "+command+", please call /help to get full list of commands I understand")
 	}
 
+}
+
+func DeleteLocations(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
+	db, err := storm.Open(DbPath)
+	if err != nil {
+		log.Printf("Error! Can't open the database, the error is %s", err.Error())
+		sendMsg(bot, message.Chat.ID, "Sorry, internal error occurred, can't open a database. Please try again later.")
+		return
+	}
+	defer db.Close()
+
+	query := db.Select()
+	if err := query.Delete(new(structs.UsersLocationBookmark)); err != nil {
+		log.Println(err.Error())
+	}
 }
 
 func PrintSavedLocations(bot *tgbotapi.BotAPI, chatID int64, userID int) {
@@ -77,7 +95,7 @@ func PrintSavedLocations(bot *tgbotapi.BotAPI, chatID int64, userID int) {
 	db.Find("UserID", userID, &locations)
 
 	var buffer bytes.Buffer
-	buffer.WriteString("Saved locations: ")
+	buffer.WriteString("Saved locations: \n")
 	for _, e := range locations {
 		buffer.WriteString("● ")
 		buffer.WriteString(e.LocationID)
