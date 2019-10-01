@@ -50,7 +50,7 @@ var states = map[int]state{
 				return "Internal error: can't update state"
 			}
 
-			fmt.Printf("%+v", sm.GetBookmark())
+			fmt.Printf("%+v", sm.GetUnfinishedBookmark())
 			return "Ok, now enter the max wind speed (m/s) that is comfortable for you in that location"
 		},
 	},
@@ -67,7 +67,7 @@ var states = map[int]state{
 			sm.UpdateFieldInBookmark("MaxWindSpeed", intMaxWindSpeed)
 			sm.markNextStepState(StepEnterMinTemp)
 
-			fmt.Printf("%+v", sm.GetBookmark())
+			fmt.Printf("%+v", sm.GetUnfinishedBookmark())
 			return "Go it, now send me lowest temperature (in ˚C) that suits for you "
 		},
 	},
@@ -86,7 +86,7 @@ var states = map[int]state{
 
 			DeleteStateForUser(sm.db, sm.UserID)
 
-			fmt.Printf("%+v", sm.GetBookmark())
+			fmt.Printf("%+v", sm.GetUnfinishedBookmark())
 			return "All done, this location was saved for you."
 		},
 	},

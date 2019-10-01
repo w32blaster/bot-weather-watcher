@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/asdine/storm"
+	"github.com/asdine/storm/q"
 	"github.com/w32blaster/bot-weather-watcher/structs"
 	tgbotapi "gopkg.in/telegram-bot-api.v4"
 	"html"
@@ -79,6 +80,7 @@ func DeleteLocations(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 	if err := query.Delete(new(structs.UsersLocationBookmark)); err != nil {
 		log.Println(err.Error())
 	}
+	sendMsg(bot, message.Chat.ID, "Deleted")
 }
 
 func PrintSavedLocations(bot *tgbotapi.BotAPI, chatID int64, userID int) {
@@ -94,15 +96,41 @@ func PrintSavedLocations(bot *tgbotapi.BotAPI, chatID int64, userID int) {
 	var locations []structs.UsersLocationBookmark
 	db.Find("UserID", userID, &locations)
 
+	// load locations, build a map
+	mapLocs := getMapOfLocations(locations, db)
+
 	var buffer bytes.Buffer
 	buffer.WriteString("Saved locations: \n")
 	for _, e := range locations {
+		currentLoc := mapLocs[e.LocationID]
 		buffer.WriteString("● ")
-		buffer.WriteString(e.LocationID)
+		if len(currentLoc.NationalPark) > 0 {
+			buffer.WriteString(currentLoc.NationalPark)
+			buffer.WriteString(", ")
+		}
+		buffer.WriteString(currentLoc.Name)
+		buffer.WriteString(", ")
+		buffer.WriteString(currentLoc.Region)
+		buffer.WriteString(", UK")
 		buffer.WriteString("\n")
 	}
 
 	sendMsg(bot, chatID, buffer.String())
+}
+
+func getMapOfLocations(locations []structs.UsersLocationBookmark, db *storm.DB) map[string]structs.SiteLocation {
+	ids := make([]string, len(locations))
+	for i, loc := range locations {
+		ids[i] = loc.LocationID
+	}
+	var locs []structs.SiteLocation
+	db.Select(q.In("ID", ids)).Find(&locs)
+	mapLocations := make(map[string]structs.SiteLocation)
+	for _, loc := range locs {
+		mapLocations[loc.ID] = loc
+	}
+
+	return mapLocations
 }
 
 // Initiate the process of adding a new location, create a new state
