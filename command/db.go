@@ -23,7 +23,7 @@ func (sm *StateMachine) CreateNewBookmark() error {
 
 func (sm *StateMachine) UpdateFieldInBookmark(fieldName string, value interface{}) error {
 	bookmark := sm.GetBookmark()
-	return sm.db.UpdateField(&bookmark, fieldName, value)
+	return sm.db.UpdateField(bookmark, fieldName, value)
 }
 
 func (sm *StateMachine) GetBookmark() *structs.UsersLocationBookmark {

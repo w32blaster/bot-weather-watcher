@@ -97,6 +97,11 @@ func StartProcessAddingNewLocation(bot *tgbotapi.BotAPI, message *tgbotapi.Messa
 	}
 
 	defer db.Close()
+
+	// to make sure we start from the beginning, clear all previous states if any
+	DeleteStateForUser(db, message.From.ID)
+
+	// and now start a new state machine
 	sm, err := LoadStateMachineFor(message.From.ID, db)
 	if err != nil {
 		log.Printf("Can't initiate a state machine. Error is %s", err.Error())

@@ -39,7 +39,10 @@ var states = map[int]state{
 					"Please ommit the 'm/s' or other suffixes", rawMessage)
 			}
 
-			sm.UpdateFieldInBookmark("LocationID", rawMessage)
+			if err := sm.UpdateFieldInBookmark("LocationID", rawMessage); err != nil {
+				log.Println(err.Error())
+				return "Internal error: can't update location"
+			}
 
 			// if correct, then move to the next step
 			if err := sm.markNextStepState(StepEnterMaxWindSpeed); err != nil {
@@ -81,7 +84,7 @@ var states = map[int]state{
 			sm.UpdateFieldInBookmark("LowestTemp", intMinTemp)
 			sm.UpdateFieldInBookmark("IsReady", true)
 
-			sm.DeleteStateForCurrentUser()
+			DeleteStateForUser(sm.db, sm.UserID)
 
 			fmt.Printf("%+v", sm.GetBookmark())
 			return "All done, this location was saved for you."
@@ -105,13 +108,11 @@ func LoadStateMachineFor(userID int, stormDb *storm.DB) (*StateMachine, error) {
 	return &sm, nil
 }
 
-func (sm *StateMachine) DeleteStateForCurrentUser() {
-	state, err := sm.loadState(sm.UserID)
-	if err != nil {
-		log.Println(err.Error())
-		return
+func DeleteStateForUser(db *storm.DB, userID int) {
+	var state structs.UserState
+	if err := db.One("UserID", userID, &state); err == nil {
+		db.DeleteStruct(&state)
 	}
-	sm.db.DeleteStruct(&state)
 }
 
 // Move to the next state, updates internal state in case of success;
