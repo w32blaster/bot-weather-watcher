@@ -5,14 +5,31 @@ import (
 )
 
 func (sm *StateMachine) CreateNewBookmark() error {
-	var bookmark structs.UsersLocationBookmark
-	if err := sm.db.One("UserID", sm.UserID, &bookmark); err == nil {
-		return nil // assuming, this is not an error, just object already created and no actions are needed
+
+	if bookmark := sm.GetBookmark(); bookmark != nil {
+		// the object already exists. Probably, user enters something wrong and decided to start again.
+		// Remove old object to begin from the start with fresh state
+		sm.db.DeleteStruct(&bookmark)
 	}
 
-	return sm.db.Save(&structs.UsersLocationBookmark{UserID: sm.UserID})
+	return sm.db.Save(&structs.UsersLocationBookmark{
+		UserID:       sm.UserID,
+		LocationID:   "",
+		LowestTemp:   0,
+		MaxWindSpeed: 0,
+		IsReady:      false,
+	})
 }
 
 func (sm *StateMachine) UpdateFieldInBookmark(fieldName string, value interface{}) error {
-	return sm.db.UpdateField(&structs.UsersLocationBookmark{UserID: sm.UserID}, "Age", 0)
+	bookmark := sm.GetBookmark()
+	return sm.db.UpdateField(&bookmark, fieldName, value)
+}
+
+func (sm *StateMachine) GetBookmark() *structs.UsersLocationBookmark {
+	var bookmark structs.UsersLocationBookmark
+	if err := sm.db.One("UserID", sm.UserID, &bookmark); err != nil {
+		return nil
+	}
+	return &bookmark
 }

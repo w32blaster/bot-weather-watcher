@@ -45,15 +45,8 @@ func main() {
 
 			} else {
 
-				if update.Message.ReplyToMessage == nil {
-
-					// user selected some inline query here
-					//commands.OnStationSelected(bot, update.Message.Chat.ID, update.Message.From.ID, update.Message.Text, &opts)
-				} else {
-
-					// just a plain text
-					command.ProcessPlainText(bot, update.Message)
-				}
+				// just a plain text
+				command.ProcessPlainText(bot, update.Message)
 			}
 
 		} else if update.CallbackQuery != nil {

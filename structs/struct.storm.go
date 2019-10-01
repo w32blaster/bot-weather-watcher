@@ -4,9 +4,10 @@ type (
 	UsersLocationBookmark struct {
 		ID           int    `storm:"id,increment"` // primary key
 		LocationID   string `storm:"index"`        // this field will be indexed
-		UserID       int
+		UserID       int    `storm:"index"`
 		MaxWindSpeed int
 		LowestTemp   int
+		IsReady      bool `storm:"index"`
 	}
 
 	UserState struct {

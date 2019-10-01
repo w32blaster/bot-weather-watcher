@@ -1,6 +1,7 @@
 package command
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/asdine/storm"
 	"github.com/w32blaster/bot-weather-watcher/structs"
@@ -53,10 +54,37 @@ func ProcessCommands(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 	case "start":
 		sendMsg(bot, chatID, "Hey! In order to begin, you should add at least one site location where you would like to observe a weather. Click /add")
 
+	case "locations":
+		PrintSavedLocations(bot, chatID, message.From.ID)
+
 	default:
 		sendMsg(bot, chatID, "Sorry, I don't recognize such command: "+command+", please call /help to get full list of commands I understand")
 	}
 
+}
+
+func PrintSavedLocations(bot *tgbotapi.BotAPI, chatID int64, userID int) {
+
+	db, err := storm.Open(DbPath)
+	if err != nil {
+		log.Printf("Error! Can't open the database, the error is %s", err.Error())
+		sendMsg(bot, chatID, "Sorry, internal error occurred, can't open a database. Please try again later.")
+		return
+	}
+	defer db.Close()
+
+	var locations []structs.UsersLocationBookmark
+	db.Find("UserID", userID, &locations)
+
+	var buffer bytes.Buffer
+	buffer.WriteString("Saved locations: ")
+	for _, e := range locations {
+		buffer.WriteString("● ")
+		buffer.WriteString(e.LocationID)
+		buffer.WriteString("\n")
+	}
+
+	sendMsg(bot, chatID, buffer.String())
 }
 
 // Initiate the process of adding a new location, create a new state
@@ -69,14 +97,22 @@ func StartProcessAddingNewLocation(bot *tgbotapi.BotAPI, message *tgbotapi.Messa
 	}
 
 	defer db.Close()
-	if _, err = LoadStateMachineFor(message.From.ID, db); err != nil {
+	sm, err := LoadStateMachineFor(message.From.ID, db)
+	if err != nil {
 		log.Printf("Can't initiate a state machine. Error is %s", err.Error())
 		sendMsg(bot, message.Chat.ID, "Sorry, internal error occurred, please trt again later")
 		return
 	}
 
+	if err := sm.CreateNewBookmark(); err != nil {
+		log.Println(err.Error())
+		sendMsg(bot, message.Chat.ID, "Sorry, internal error occurred, please trt again later")
+		return
+	}
+
 	sendMsg(bot, message.Chat.ID, "Ok, let's add a location where you want to monitor a weather. "+
-		"Start typing name and suggestions will appear.")
+		"Start typing name following by the bot name and suggestions will appear. \n"+
+		"Example: `@weather_observer_bot London`")
 }
 
 // Process a general text. The context should be retrieved from state machine
@@ -112,7 +148,7 @@ func ProcessInlineQuery(bot *tgbotapi.BotAPI, inlineQuery *tgbotapi.InlineQuery)
 	// firstly, make query to TFL
 	searchQuery := inlineQuery.Query
 	var locations []structs.SiteLocation
-	db.Prefix("Name", searchQuery, &locations)
+	db.Prefix("Name", searchQuery, &locations, storm.Limit(10))
 
 	var answers []interface{}
 
@@ -120,7 +156,7 @@ func ProcessInlineQuery(bot *tgbotapi.BotAPI, inlineQuery *tgbotapi.InlineQuery)
 
 		// Build one line for inline answer (one result)
 		strLocID := fmt.Sprint(loc.ID)
-		answer := tgbotapi.NewInlineQueryResultArticleHTML(strLocID, loc.Name, "Selected Location: "+strLocID)
+		answer := tgbotapi.NewInlineQueryResultArticleHTML(strLocID, loc.Name, strLocID)
 		descr := loc.AuthArea + ", " + strings.ToUpper(loc.Region) + ", UK"
 		if len(loc.NationalPark) > 0 {
 			descr = loc.NationalPark + ", " + descr

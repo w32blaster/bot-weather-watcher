@@ -27,16 +27,23 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Found %d items. Let's insert them to a database", len(locations))
+	fmt.Printf("Found %d items. Let's insert them to a database\n", len(locations))
 	tx, err := db.Begin(true)
 	for i, loc := range locations {
-		tx.Save(loc)
-		if i%100 == 0 {
+		tx.Save(&loc)
+		if i%500 == 0 {
 			fmt.Printf("%d) records inserted\n", i)
 		}
 	}
-	tx.Commit()
+	if err := tx.Commit(); err != nil {
+		fmt.Printf("Error! Can't commit transaction. " + err.Error())
+	}
 	fmt.Println("All done")
+
+	var locs []structs.SiteLocation
+	db.All(&locs)
+
+	fmt.Printf("We have %d records\n", len(locs))
 }
 
 func getListOfLocations() ([]structs.SiteLocation, error) {
