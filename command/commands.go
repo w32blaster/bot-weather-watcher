@@ -42,8 +42,8 @@ func ProcessCommands(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 		     /start - shows start message
 			 /help - this command
 			 /add - add new place to watch
+			 /locations - list all the saved locations
 			 /now - collect the weather at current moment for all the saved places
-             /forecast - show the forecast for all saved places within 3 days
 			 /about - information about this bot
 			 /reset - reset the inner state for current user
 			 /deleteall - delete all saved places`
@@ -64,7 +64,6 @@ func ProcessCommands(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 	default:
 		sendMsg(bot, chatID, "Sorry, I don't recognize such command: "+command+", please call /help to get full list of commands I understand")
 	}
-
 }
 
 func DeleteLocations(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
@@ -95,6 +94,11 @@ func PrintSavedLocations(bot *tgbotapi.BotAPI, chatID int64, userID int) {
 
 	var locations []structs.UsersLocationBookmark
 	db.Find("UserID", userID, &locations)
+
+	if len(locations) == 0 {
+		sendMsg(bot, chatID, "No saved locations yet. Please type /add to add one")
+		return
+	}
 
 	// load locations, build a map
 	mapLocs := getMapOfLocations(locations, db)
