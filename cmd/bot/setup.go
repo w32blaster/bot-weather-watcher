@@ -12,7 +12,7 @@ import (
 	"github.com/asdine/storm"
 )
 
-func main() {
+func main2() {
 	fmt.Println("Populate database with site locations")
 	db, err := storm.Open(command.DbPath, storm.Batch())
 	if err != nil {

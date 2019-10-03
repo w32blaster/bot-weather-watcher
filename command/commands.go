@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	DbPath = "weather.db"
+	DbPath           = "weather.db"
+	LocationIDPrefix = "LocationID:"
 )
 
 // ProcessCommands acts when user sent to a bot some command, for example "/command arg1 arg2"
@@ -211,7 +212,7 @@ func ProcessInlineQuery(bot *tgbotapi.BotAPI, inlineQuery *tgbotapi.InlineQuery)
 
 		// Build one line for inline answer (one result)
 		strLocID := fmt.Sprint(loc.ID)
-		answer := tgbotapi.NewInlineQueryResultArticleHTML(strLocID, loc.Name, strLocID)
+		answer := tgbotapi.NewInlineQueryResultArticleHTML(LocationIDPrefix+strLocID, loc.Name, strLocID)
 		descr := loc.AuthArea + ", " + strings.ToUpper(loc.Region) + ", UK"
 		if len(loc.NationalPark) > 0 {
 			descr = loc.NationalPark + ", " + descr

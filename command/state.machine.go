@@ -6,6 +6,7 @@ import (
 	"github.com/w32blaster/bot-weather-watcher/structs"
 	"log"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -34,12 +35,17 @@ var states = map[int]state{
 		next: StepEnterMaxWindSpeed,
 		fnProcess: func(rawMessage string, sm *StateMachine) string {
 
-			if _, err := strconv.Atoi(rawMessage); err != nil {
-				return fmt.Sprintf("hey, %s is not a number! Please send me only number which is max speed of wind acceptable for you."+
-					"Please ommit the 'm/s' or other suffixes", rawMessage)
+			if !strings.HasPrefix(rawMessage, LocationIDPrefix) {
+				return "Error, wrong location ID format"
 			}
 
-			if err := sm.UpdateFieldInBookmark("LocationID", rawMessage); err != nil {
+			locaIDClean := strings.TrimPrefix(rawMessage, LocationIDPrefix)
+			if _, err := strconv.Atoi(locaIDClean); err != nil {
+				return fmt.Sprintf("hey, %s is not a number! Please send me only number which is max speed of wind acceptable for you."+
+					"Please ommit the 'mph' or other suffixes", rawMessage)
+			}
+
+			if err := sm.UpdateFieldInBookmark("LocationID", locaIDClean); err != nil {
 				log.Println(err.Error())
 				return "Internal error: can't update location"
 			}
@@ -51,7 +57,7 @@ var states = map[int]state{
 			}
 
 			fmt.Printf("%+v", sm.GetUnfinishedBookmark())
-			return "Ok, now enter the max wind speed (m/s) that is comfortable for you in that location"
+			return "Ok, now enter the max wind speed (mph) that is comfortable for you in that location"
 		},
 	},
 
@@ -60,8 +66,8 @@ var states = map[int]state{
 		fnProcess: func(rawMessage string, sm *StateMachine) string {
 			intMaxWindSpeed, err := strconv.Atoi(rawMessage)
 			if err != nil {
-				return fmt.Sprintf("hey, %s is not a number! Please send me only number which is max speed of wind acceptable for you."+
-					"Please ommit the 'm/s' or other suffixes", rawMessage)
+				return fmt.Sprintf("hey, %s is not a number! Please send me only number which is min temperature acceptable for you."+
+					"Please ommit the 'degrees, ˚C or other suffixes; number only", rawMessage)
 			}
 
 			sm.UpdateFieldInBookmark("MaxWindSpeed", intMaxWindSpeed)
@@ -84,6 +90,7 @@ var states = map[int]state{
 			sm.UpdateFieldInBookmark("LowestTemp", intMinTemp)
 			sm.UpdateFieldInBookmark("IsReady", true)
 
+			sm.currentState = FINISHED
 			DeleteStateForUser(sm.db, sm.UserID)
 
 			fmt.Printf("%+v", sm.GetUnfinishedBookmark())
@@ -131,7 +138,12 @@ func (sm *StateMachine) markNextStepState(newState int) error {
 	}
 
 	// and update its value
-	return sm.db.UpdateField(&currState, "CurrentState", newState)
+	if err := sm.db.UpdateField(&currState, "CurrentState", newState); err != nil {
+		return err
+	}
+
+	sm.currentState = newState
+	return nil
 }
 
 func (sm *StateMachine) loadState(userID int) (int, error) {
