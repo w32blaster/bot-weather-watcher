@@ -47,7 +47,7 @@ func ProcessCommands(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 			 /help - this command
 			 /add - add new place to watch
 			 /locations - list all the saved locations
-			 /now - collect the weather at current moment for all the saved places
+			 /forecast - collect the weather at current moment for all the saved places
 			 /about - information about this bot
 			 /reset - reset the inner state for current user
 			 /deleteall - delete all saved places`
@@ -174,9 +174,11 @@ func StartProcessAddingNewLocation(bot *tgbotapi.BotAPI, message *tgbotapi.Messa
 		return
 	}
 
-	sendMsg(bot, message.Chat.ID, "Ok, let's add a location where you want to monitor a weather. "+
+	resp, _ := sendMsg(bot, message.Chat.ID, "Ok, let's add a location where you want to monitor a weather. "+
 		"Start typing name following by the bot name and suggestions will appear. \n"+
 		"Example: @WeatherObserverBot London")
+
+	renderButtonThatOpensInlineQuery(bot, message.Chat.ID, resp.MessageID)
 }
 
 // Process a general text. The context should be retrieved from state machine
@@ -278,4 +280,24 @@ func sendMsg(bot *tgbotapi.BotAPI, chatID int64, textMarkdown string) (tgbotapi.
 	}
 
 	return resp, err
+}
+
+func renderKeyboardButtonActivateQuery(message string) *tgbotapi.InlineKeyboardButton {
+	emtpyString := ""
+	button := tgbotapi.InlineKeyboardButton{
+		Text:                         message,
+		SwitchInlineQueryCurrentChat: &emtpyString,
+	}
+	return &button
+}
+
+// renders the button "search for location"
+func renderButtonThatOpensInlineQuery(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		[]tgbotapi.InlineKeyboardButton{
+			*renderKeyboardButtonActivateQuery(" 🔍 Search for location"),
+		})
+
+	keyboardMsg := tgbotapi.NewEditMessageReplyMarkup(chatID, messageID, keyboard)
+	bot.Send(keyboardMsg)
 }
