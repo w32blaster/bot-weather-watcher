@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/asdine/storm/codec/msgpack"
 	"io/ioutil"
 	"os"
 
@@ -12,9 +13,9 @@ import (
 	"github.com/asdine/storm"
 )
 
-func main2() {
+func main() {
 	fmt.Println("Populate database with site locations")
-	db, err := storm.Open(command.DbPath, storm.Batch())
+	db, err := storm.Open(command.DbPath, storm.Codec(msgpack.Codec))
 	if err != nil {
 		fmt.Println("Error opening the database, err " + err.Error())
 		os.Exit(1)

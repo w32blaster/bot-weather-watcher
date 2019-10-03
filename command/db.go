@@ -1,6 +1,7 @@
 package command
 
 import (
+	"github.com/asdine/storm"
 	"github.com/asdine/storm/q"
 	"github.com/w32blaster/bot-weather-watcher/structs"
 )
@@ -38,4 +39,16 @@ func (sm *StateMachine) GetUnfinishedBookmark() *structs.UsersLocationBookmark {
 		return nil
 	}
 	return &bookmark
+}
+
+func DeleteStateForUser(db *storm.DB, userID int) {
+	var state structs.UserState
+	if err := db.One("UserID", userID, &state); err == nil {
+		db.DeleteStruct(&state)
+	}
+}
+
+func DeleteAllUnfinishedBookmarksForThisUser(db *storm.DB, userID int) {
+	query := db.Select(q.Eq("UserID", userID), q.Eq("IsReady", false))
+	query.Delete(new(structs.UsersLocationBookmark))
 }

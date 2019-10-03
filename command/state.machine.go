@@ -115,13 +115,6 @@ func LoadStateMachineFor(userID int, stormDb *storm.DB) (*StateMachine, error) {
 	return &sm, nil
 }
 
-func DeleteStateForUser(db *storm.DB, userID int) {
-	var state structs.UserState
-	if err := db.One("UserID", userID, &state); err == nil {
-		db.DeleteStruct(&state)
-	}
-}
-
 // Move to the next state, updates internal state in case of success;
 // returns message that should be returned to user
 func (sm *StateMachine) ProcessNextState(rawMessage string) string {

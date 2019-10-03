@@ -59,6 +59,8 @@ func ProcessCommands(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 	case "start":
 		sendMsg(bot, chatID, "Hey! In order to begin, you should add at least one site location where you would like to observe a weather. Click /add")
 
+	//case "forecast":
+
 	case "locations":
 		PrintSavedLocations(bot, chatID, message.From.ID)
 
@@ -155,6 +157,9 @@ func StartProcessAddingNewLocation(bot *tgbotapi.BotAPI, message *tgbotapi.Messa
 	// to make sure we start from the beginning, clear all previous states if any
 	DeleteStateForUser(db, message.From.ID)
 
+	// Delete all the bookmarks that this user has not finished if any
+	DeleteAllUnfinishedBookmarksForThisUser(db, message.From.ID)
+
 	// and now start a new state machine
 	sm, err := LoadStateMachineFor(message.From.ID, db)
 	if err != nil {
@@ -171,7 +176,7 @@ func StartProcessAddingNewLocation(bot *tgbotapi.BotAPI, message *tgbotapi.Messa
 
 	sendMsg(bot, message.Chat.ID, "Ok, let's add a location where you want to monitor a weather. "+
 		"Start typing name following by the bot name and suggestions will appear. \n"+
-		"Example: `@weather_observer_bot London`")
+		"Example: @WeatherObserverBot London")
 }
 
 // Process a general text. The context should be retrieved from state machine
@@ -207,7 +212,12 @@ func ProcessInlineQuery(bot *tgbotapi.BotAPI, inlineQuery *tgbotapi.InlineQuery)
 	// firstly, make query to TFL
 	searchQuery := inlineQuery.Query
 	var locations []structs.SiteLocation
-	db.Prefix("Name", searchQuery, &locations, storm.Limit(10))
+
+	db.Select(q.Or(
+		q.Re("Name", "(?i)(^| )"+searchQuery),
+		q.Re("AuthArea", "(?i)(^| )"+searchQuery),
+		q.Re("NationalPark", "(?i)(^| )"+searchQuery),
+	)).Limit(20).OrderBy("Name").Find(&locations)
 
 	var answers []interface{}
 
@@ -215,7 +225,7 @@ func ProcessInlineQuery(bot *tgbotapi.BotAPI, inlineQuery *tgbotapi.InlineQuery)
 
 		// Build one line for inline answer (one result)
 		strLocID := fmt.Sprint(loc.ID)
-		answer := tgbotapi.NewInlineQueryResultArticleHTML(LocationIDPrefix+strLocID, loc.Name, strLocID)
+		answer := tgbotapi.NewInlineQueryResultArticleHTML(strLocID, loc.Name, LocationIDPrefix+strLocID)
 		descr := loc.AuthArea + ", " + strings.ToUpper(loc.Region) + ", UK"
 		if len(loc.NationalPark) > 0 {
 			descr = loc.NationalPark + ", " + descr
