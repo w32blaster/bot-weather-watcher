@@ -3,13 +3,16 @@ package command
 import (
 	"bytes"
 	"fmt"
-	"github.com/asdine/storm"
-	"github.com/asdine/storm/q"
-	"github.com/w32blaster/bot-weather-watcher/structs"
-	tgbotapi "gopkg.in/telegram-bot-api.v4"
 	"html"
 	"log"
 	"strings"
+
+	"github.com/w32blaster/bot-weather-watcher/structs"
+
+	"github.com/asdine/storm"
+	"github.com/asdine/storm/codec/msgpack"
+	"github.com/asdine/storm/q"
+	tgbotapi "gopkg.in/telegram-bot-api.v4"
 )
 
 const (
@@ -68,7 +71,7 @@ func ProcessCommands(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 }
 
 func DeleteLocations(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
-	db, err := storm.Open(DbPath)
+	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
 	if err != nil {
 		log.Printf("Error! Can't open the database, the error is %s", err.Error())
 		sendMsg(bot, message.Chat.ID, "Sorry, internal error occurred, can't open a database. Please try again later.")
@@ -85,7 +88,7 @@ func DeleteLocations(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 
 func PrintSavedLocations(bot *tgbotapi.BotAPI, chatID int64, userID int) {
 
-	db, err := storm.Open(DbPath)
+	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
 	if err != nil {
 		log.Printf("Error! Can't open the database, the error is %s", err.Error())
 		sendMsg(bot, chatID, "Sorry, internal error occurred, can't open a database. Please try again later.")
@@ -140,7 +143,7 @@ func getMapOfLocations(locations []structs.UsersLocationBookmark, db *storm.DB) 
 
 // Initiate the process of adding a new location, create a new state
 func StartProcessAddingNewLocation(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
-	db, err := storm.Open(DbPath)
+	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
 	if err != nil {
 		log.Printf("Error! Can't open the database, the error is %s", err.Error())
 		sendMsg(bot, message.Chat.ID, "Sorry, internal error occurred, can't open a database. Please try again later.")
@@ -173,7 +176,7 @@ func StartProcessAddingNewLocation(bot *tgbotapi.BotAPI, message *tgbotapi.Messa
 
 // Process a general text. The context should be retrieved from state machine
 func ProcessPlainText(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
-	db, err := storm.Open(DbPath)
+	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
 	defer db.Close()
 
 	if err != nil {
@@ -194,7 +197,7 @@ func ProcessPlainText(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 }
 
 func ProcessInlineQuery(bot *tgbotapi.BotAPI, inlineQuery *tgbotapi.InlineQuery) {
-	db, err := storm.Open(DbPath)
+	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
 	if err != nil {
 		fmt.Println(err.Error())
 		return
