@@ -21,7 +21,7 @@ const (
 )
 
 // ProcessCommands acts when user sent to a bot some command, for example "/command arg1 arg2"
-func ProcessCommands(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
+func ProcessCommands(bot *tgbotapi.BotAPI, message *tgbotapi.Message, opts *structs.Opts) {
 
 	chatID := message.Chat.ID
 	command := extractCommand(message.Command())
@@ -59,7 +59,8 @@ func ProcessCommands(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 	case "start":
 		sendMsg(bot, chatID, "Hey! In order to begin, you should add at least one site location where you would like to observe a weather. Click /add")
 
-	//case "forecast":
+	case "forecast":
+		RequestWeatherForecast(bot, chatID, message.From.ID, opts)
 
 	case "locations":
 		PrintSavedLocations(bot, chatID, message.From.ID)
@@ -86,6 +87,25 @@ func DeleteLocations(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 		log.Println(err.Error())
 	}
 	sendMsg(bot, message.Chat.ID, "Deleted")
+}
+
+func RequestWeatherForecast(bot *tgbotapi.BotAPI, chatID int64, userID int, opts *structs.Opts) {
+
+	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
+	if err != nil {
+		log.Printf("Error! Can't open the database, the error is %s", err.Error())
+		sendMsg(bot, chatID, "Sorry, internal error occurred, can't open a database. Please try again later.")
+		return
+	}
+	defer db.Close()
+
+	var locations []structs.UsersLocationBookmark
+	db.Find("UserID", userID, &locations)
+
+	// FINISH IT:
+	loc, _ := getDailyForecastFor(locations[0].LocationID, opts)
+
+	sendMsg(bot, chatID, fmt.Sprintf("Location: %s, period: %+v", loc.SiteRep.Dv.Location.Name, loc.SiteRep.Dv.Location.Periods))
 }
 
 func PrintSavedLocations(bot *tgbotapi.BotAPI, chatID int64, userID int) {
@@ -176,7 +196,7 @@ func StartProcessAddingNewLocation(bot *tgbotapi.BotAPI, message *tgbotapi.Messa
 
 	resp, _ := sendMsg(bot, message.Chat.ID, "Ok, let's add a location where you want to monitor a weather. "+
 		"Start typing name following by the bot name and suggestions will appear. \n"+
-		"Example: @WeatherObserverBot London")
+		"Example: @WeatherObserverBot London \n\n Or, click the button below")
 
 	renderButtonThatOpensInlineQuery(bot, message.Chat.ID, resp.MessageID)
 }

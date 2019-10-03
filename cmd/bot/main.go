@@ -41,7 +41,7 @@ func main() {
 			if update.Message.IsCommand() {
 
 				// This is a command starting with slash
-				command.ProcessCommands(bot, update.Message)
+				command.ProcessCommands(bot, update.Message, &opts)
 
 			} else {
 
