@@ -101,11 +101,17 @@ func RequestWeatherForecast(bot *tgbotapi.BotAPI, chatID int64, userID int, opts
 	var locations []structs.UsersLocationBookmark
 	db.Find("UserID", userID, &locations)
 
-	loc, _ := getDailyForecastFor(locations[0].LocationID, opts)
+	mapLocations := getMapOfLocations(locations, db)
 
-	str := drawFiveDaysTable(loc)
+	// Optimize it!!
+	for _, location := range locations {
+		loc, _ := getDailyForecastFor(location.LocationID, opts)
 
-	sendMsg(bot, chatID, str)
+		site := mapLocations[location.LocationID]
+		sendMsg(bot, chatID, fmt.Sprintf("%s %s, %s, %s UK", site.NationalPark, site.Name, site.AuthArea, strings.ToUpper(site.Region)))
+		str := drawFiveDaysTable(loc)
+		sendMsg(bot, chatID, str)
+	}
 }
 
 func PrintSavedLocations(bot *tgbotapi.BotAPI, chatID int64, userID int) {

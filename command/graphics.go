@@ -9,7 +9,7 @@ import (
 
 const (
 	maxSymbolsInRow = 25 // without the last vertical bar
-	vertTopLine     = "╭─────┬────────────────────"
+	vertTopLine     = "╭─────┬───────────────────"
 )
 
 func drawFiveDaysTable(root *structs.RootSiteRep) string {
@@ -19,7 +19,7 @@ func drawFiveDaysTable(root *structs.RootSiteRep) string {
 	}
 
 	var buffer bytes.Buffer
-	buffer.WriteString("```\n╭─────┬─────────────────────╮ \n")
+	buffer.WriteString("```\n╭─────┬────────────────────╮ \n")
 
 	// row 1 and 2
 	var bufferRow1 bytes.Buffer
@@ -58,7 +58,7 @@ func drawFiveDaysTable(root *structs.RootSiteRep) string {
 		bufferRow3.WriteString(" │ ")
 
 		// Row 1, column 2: max day temperature
-		bufferRow1.WriteString("Temp: ")
+		bufferRow1.WriteString("T: ")
 		bufferRow1.WriteString(day.Rep[0]["Dm"])
 		bufferRow1.WriteString("˚C (")
 		bufferRow1.WriteString(day.Rep[1]["Nm"])
@@ -66,14 +66,14 @@ func drawFiveDaysTable(root *structs.RootSiteRep) string {
 		compensateSpaces(&bufferRow1)
 
 		// Row 2, Column 2: max wind speed
-		bufferRow2.WriteString("Wind: ")
+		bufferRow2.WriteString("W: ")
 		bufferRow2.WriteString(day.Rep[0]["Gn"])
 		bufferRow2.WriteString("m/h (")
 		bufferRow2.WriteString(day.Rep[1]["Gm"])
 		bufferRow2.WriteString("m/h)")
 		compensateSpaces(&bufferRow2)
 
-		bufferRow3.WriteString("Rain: ")
+		bufferRow3.WriteString("R: ")
 		bufferRow3.WriteString(day.Rep[0]["PPd"])
 		bufferRow3.WriteString("% (")
 		bufferRow3.WriteString(day.Rep[1]["PPn"])
@@ -91,7 +91,7 @@ func drawFiveDaysTable(root *structs.RootSiteRep) string {
 		buffer.Write(bufferRow3.Bytes())
 		buffer.WriteRune('\n')
 		if i < 4 {
-			buffer.WriteString("├─────┼─────────────────────┤ \n")
+			buffer.WriteString("├─────┼────────────────────┤ \n")
 		}
 
 		bufferRow1.Reset()
@@ -99,7 +99,7 @@ func drawFiveDaysTable(root *structs.RootSiteRep) string {
 		bufferRow3.Reset()
 	}
 
-	buffer.WriteString("╰─────┴─────────────────────╯ \n```\n")
+	buffer.WriteString("╰─────┴────────────────────╯ \n```\n")
 
 	return buffer.String()
 }
