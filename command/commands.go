@@ -49,7 +49,6 @@ func ProcessCommands(bot *tgbotapi.BotAPI, message *tgbotapi.Message, opts *stru
 			 /locations - list all the saved locations
 			 /forecast - collect the weather at current moment for all the saved places
 			 /about - information about this bot
-			 /reset - reset the inner state for current user
 			 /deleteall - delete all saved places`
 		sendMsg(bot, chatID, html.EscapeString(help))
 
@@ -102,10 +101,11 @@ func RequestWeatherForecast(bot *tgbotapi.BotAPI, chatID int64, userID int, opts
 	var locations []structs.UsersLocationBookmark
 	db.Find("UserID", userID, &locations)
 
-	// FINISH IT:
 	loc, _ := getDailyForecastFor(locations[0].LocationID, opts)
 
-	sendMsg(bot, chatID, fmt.Sprintf("Location: %s, period: %+v", loc.SiteRep.Dv.Location.Name, loc.SiteRep.Dv.Location.Periods))
+	str := drawFiveDaysTable(loc)
+
+	sendMsg(bot, chatID, str)
 }
 
 func PrintSavedLocations(bot *tgbotapi.BotAPI, chatID int64, userID int) {
