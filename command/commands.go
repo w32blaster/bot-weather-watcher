@@ -6,6 +6,7 @@ import (
 	"html"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/w32blaster/bot-weather-watcher/structs"
 
@@ -110,7 +111,11 @@ func RequestWeatherForecast(bot *tgbotapi.BotAPI, chatID int64, userID int, opts
 		site := mapLocations[location.LocationID]
 		sendMsg(bot, chatID, fmt.Sprintf("%s %s, %s, %s UK", site.NationalPark, site.Name, site.AuthArea, strings.ToUpper(site.Region)))
 		str := drawFiveDaysTable(loc)
-		sendMsg(bot, chatID, str)
+		str = str + "\n For detailed daily forecast per 3 hour please use buttons below:"
+		resp, _ := sendMsg(bot, chatID, str)
+
+		// render buttons with dates
+		renderDetailedDatesButtons(bot, chatID, resp.MessageID, loc)
 	}
 }
 
@@ -138,6 +143,8 @@ func PrintSavedLocations(bot *tgbotapi.BotAPI, chatID int64, userID int) {
 	var buffer bytes.Buffer
 	buffer.WriteString("Saved locations: \n")
 	for _, e := range locations {
+		fmt.Printf(" %+v \n", e)
+
 		currentLoc := mapLocs[e.LocationID]
 		buffer.WriteString("● ")
 		if len(currentLoc.NationalPark) > 0 {
@@ -227,6 +234,42 @@ func ProcessPlainText(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 
 	msg := stateMachine.ProcessNextState(message.Text)
 	sendMsg(bot, message.Chat.ID, msg)
+}
+
+func ProcessButtonCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, opts *structs.Opts) {
+
+	// notify the telegram that we processed the button, it will turn "loading indicator" off
+	defer bot.AnswerCallbackQuery(tgbotapi.CallbackConfig{
+		CallbackQueryID: callbackQuery.ID,
+	})
+
+	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
+	if err != nil {
+		log.Println(err.Error())
+		sendMsg(bot, callbackQuery.Message.Chat.ID, "Whoops... error :(")
+		return
+	}
+	defer db.Close()
+
+	// expected data is "location id # date", for example
+	parts := strings.Split(callbackQuery.Data, "#")
+
+	var locations []structs.UsersLocationBookmark
+	db.Select(q.Eq("LocationID", parts[0]), q.Eq("UserID", callbackQuery.From.ID)).Limit(1).Find(&locations)
+
+	site := getMapOfLocations(locations, db)[parts[0]]
+	title := "*" + site.NationalPark + " " + site.Name + ", " + site.AuthArea + ", " + site.Region +
+		", UK* \n------  \n" + parts[1] + "\n"
+
+	// make request to MetOffice
+	root, err := get3HoursForecastFor(parts[0], opts)
+	for _, day := range root.SiteRep.Dv.Location.Periods {
+		if day.Value == parts[1] {
+			str := printDetailedPlotsForADay(day.Rep)
+			sendMsg(bot, callbackQuery.Message.Chat.ID, title+str)
+			break
+		}
+	}
 }
 
 func ProcessInlineQuery(bot *tgbotapi.BotAPI, inlineQuery *tgbotapi.InlineQuery) {
@@ -324,6 +367,25 @@ func renderButtonThatOpensInlineQuery(bot *tgbotapi.BotAPI, chatID int64, messag
 			*renderKeyboardButtonActivateQuery(" 🔍 Search for location"),
 		})
 
+	keyboardMsg := tgbotapi.NewEditMessageReplyMarkup(chatID, messageID, keyboard)
+	bot.Send(keyboardMsg)
+}
+
+// renders the button "search for location"
+func renderDetailedDatesButtons(bot *tgbotapi.BotAPI, chatID int64, messageID int, root *structs.RootSiteRep) {
+
+	rowButtons := make([]tgbotapi.InlineKeyboardButton, 5)
+	for i, period := range root.SiteRep.Dv.Location.Periods {
+		t, err := time.Parse(layoutMetofficeDate, period.Value)
+		text := "NaN"
+		if err == nil {
+			text = t.Format("2/1")
+		}
+
+		rowButtons[i] = tgbotapi.NewInlineKeyboardButtonData(text, root.SiteRep.Dv.Location.ID+"#"+period.Value)
+	}
+
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(rowButtons)
 	keyboardMsg := tgbotapi.NewEditMessageReplyMarkup(chatID, messageID, keyboard)
 	bot.Send(keyboardMsg)
 }
