@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
@@ -104,7 +105,7 @@ func RequestWeatherForecast(bot *tgbotapi.BotAPI, chatID int64, userID int, opts
 
 	mapLocations := getMapOfLocations(locations, db)
 
-	// Optimize it!!
+	// Optimize it!! One per request + button "Next" and "Prev"
 	for _, location := range locations {
 		loc, _ := getDailyForecastFor(location.LocationID, opts)
 
@@ -142,11 +143,11 @@ func PrintSavedLocations(bot *tgbotapi.BotAPI, chatID int64, userID int) {
 
 	var buffer bytes.Buffer
 	buffer.WriteString("Saved locations: \n")
-	for _, e := range locations {
+	for i, e := range locations {
 		fmt.Printf(" %+v \n", e)
 
 		currentLoc := mapLocs[e.LocationID]
-		buffer.WriteString("● ")
+		buffer.WriteString(strconv.Itoa(i) + ") ")
 		if len(currentLoc.NationalPark) > 0 {
 			buffer.WriteString(currentLoc.NationalPark)
 			buffer.WriteString(", ")
@@ -257,15 +258,31 @@ func ProcessButtonCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 	var locations []structs.UsersLocationBookmark
 	db.Select(q.Eq("LocationID", parts[0]), q.Eq("UserID", callbackQuery.From.ID)).Limit(1).Find(&locations)
 
+	// format the data
+	dateFormatted := "unknown date"
+	if t, err := time.Parse(layoutMetofficeDate, parts[1]); err == nil {
+		dateFormatted = t.Format("2 January 2006, Monday")
+	}
+
 	site := getMapOfLocations(locations, db)[parts[0]]
 	title := "*" + site.NationalPark + " " + site.Name + ", " + site.AuthArea + ", " + site.Region +
-		", UK* \n------  \n" + parts[1] + "\n"
+		", UK*\n" + dateFormatted + "\n------\n\n"
 
 	// make request to MetOffice
 	root, err := get3HoursForecastFor(parts[0], opts)
 	for _, day := range root.SiteRep.Dv.Location.Periods {
 		if day.Value == parts[1] {
-			str := printDetailedPlotsForADay(day.Rep)
+
+			str := "Temperature: \n"
+			str = str + printDetailedPlotsForADay(day.Rep, "T", "˚C")
+
+			str = str + "Wind speed: \n"
+			str = str + printDetailedPlotsForADay(day.Rep, "S", "mph")
+
+			// too tall if rain is possible
+			//str = str + "Precipitation Probability: \n"
+			//str = str + printDetailedPlotsForADay(day.Rep, "Pp", "%ß")
+
 			sendMsg(bot, callbackQuery.Message.Chat.ID, title+str)
 			break
 		}
@@ -376,9 +393,8 @@ func renderDetailedDatesButtons(bot *tgbotapi.BotAPI, chatID int64, messageID in
 
 	rowButtons := make([]tgbotapi.InlineKeyboardButton, 5)
 	for i, period := range root.SiteRep.Dv.Location.Periods {
-		t, err := time.Parse(layoutMetofficeDate, period.Value)
 		text := "NaN"
-		if err == nil {
+		if t, err := time.Parse(layoutMetofficeDate, period.Value); err == nil {
 			text = t.Format("2/1")
 		}
 
