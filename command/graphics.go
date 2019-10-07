@@ -10,10 +10,49 @@ import (
 )
 
 const (
-	maxSymbolsInRow     = 25 // without the last vertical bar
 	vertTopLine         = "╭─────┬───────────────────"
 	layoutMetofficeDate = "2006-01-02Z"
 )
+
+type weatherType struct {
+	name string
+	icon rune
+}
+
+// Please refer to the documentation for the code list
+var mapWeatherTypes = map[int]weatherType{
+	0:  {"Clear night", '🌖'},
+	1:  {"Sunny day", '☀'},
+	2:  {"Partly cloudy (night)", '🌤'},
+	3:  {"Partly cloudy (day)", '🌤'},
+	4:  {"Not used", '-'},
+	5:  {"Mist", '🌫'},
+	6:  {"Fog", '🌫'},
+	7:  {"Cloudy", '⛅'},
+	8:  {"Overcast", '☁'},
+	9:  {"Light rain shower (night)", '🌧'},
+	10: {"Light rain shower (day)", '🌧'},
+	11: {"Drizzle", '🌧'},
+	12: {"Light rain", '🌧'},
+	13: {"Heavy rain shower (night)", '🌧'},
+	14: {"Heavy rain shower (day)", '🌧'},
+	15: {"Heavy rain", '🌧'},
+	16: {"Sleet shower (night)", '🌨'},
+	17: {"Sleet shower (day)", '🌨'},
+	18: {"Sleet", '🌨'},
+	19: {"Hail shower (night)", '🌨'},
+	20: {"Hail shower (day)", '🌨'},
+	21: {"Hail", '🌨'},
+	22: {"Light snow shower (night)", '❄'},
+	23: {"Light snow shower (day)", '❄'},
+	24: {"Light snow", '❄'},
+	25: {"Heavy snow shower (night)", '❄'},
+	26: {"Heavy snow shower (day)", '❄'},
+	27: {"Heavy snow", '❄'},
+	28: {"Thunder shower (night)", '⛈'},
+	29: {"Thunder shower (day)", '⛈'},
+	30: {"Thunder", '🌩'},
+}
 
 func drawFiveDaysTable(root *structs.RootSiteRep) string {
 	days := root.SiteRep.Dv.Location.Periods
@@ -28,12 +67,14 @@ func drawFiveDaysTable(root *structs.RootSiteRep) string {
 	var bufferRow1 bytes.Buffer
 	var bufferRow2 bytes.Buffer
 	var bufferRow3 bytes.Buffer
+	var bufferRow4 bytes.Buffer
 
 	for i, day := range days {
 
 		bufferRow1.WriteString("│ ")
 		bufferRow2.WriteString("│ ")
 		bufferRow3.WriteString("│ ")
+		bufferRow4.WriteString("│ ")
 
 		// expected format like "2019-10-03Z""
 		t, err := time.Parse(layoutMetofficeDate, day.Value)
@@ -58,6 +99,14 @@ func drawFiveDaysTable(root *structs.RootSiteRep) string {
 		bufferRow1.WriteString(" │ ")
 		bufferRow2.WriteString(" │ ")
 		bufferRow3.WriteString(" │ ")
+		bufferRow4.WriteString(" │ ")
+
+		weatherType := 5
+		if wt, err := strconv.Atoi(day.Rep[0]["W"]); err == nil {
+			weatherType = wt
+		}
+		bufferRow4.WriteRune(mapWeatherTypes[weatherType].icon)
+		compensateSpaces(&bufferRow4)
 
 		// Row 1, column 2: max day temperature
 		bufferRow1.WriteString("T: ")
@@ -85,7 +134,10 @@ func drawFiveDaysTable(root *structs.RootSiteRep) string {
 		bufferRow1.WriteString(" │")
 		bufferRow2.WriteString(" │")
 		bufferRow3.WriteString(" │")
+		bufferRow4.WriteString(" │")
 
+		buffer.Write(bufferRow4.Bytes())
+		buffer.WriteRune('\n')
 		buffer.Write(bufferRow1.Bytes())
 		buffer.WriteRune('\n')
 		buffer.Write(bufferRow2.Bytes())

@@ -1,5 +1,5 @@
 migrate:
-	go build cmd/bot/setup.go
+	go build cmd/create-resources/main.go
 	./setup
 	rm ./setup
 
