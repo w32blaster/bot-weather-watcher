@@ -99,13 +99,15 @@ func drawFiveDaysTable(root *structs.RootSiteRep) string {
 		bufferRow1.WriteString(" │ ")
 		bufferRow2.WriteString(" │ ")
 		bufferRow3.WriteString(" │ ")
-		bufferRow4.WriteString(" │ ")
 
+		// Weather icon
 		weatherType := 5
 		if wt, err := strconv.Atoi(day.Rep[0]["W"]); err == nil {
 			weatherType = wt
 		}
 		bufferRow4.WriteRune(mapWeatherTypes[weatherType].icon)
+		bufferRow4.WriteString("  │")
+		//bufferRow4.WriteString(mapWeatherTypes[weatherType].name)
 		compensateSpaces(&bufferRow4)
 
 		// Row 1, column 2: max day temperature
@@ -124,6 +126,7 @@ func drawFiveDaysTable(root *structs.RootSiteRep) string {
 		bufferRow2.WriteString("m/h)")
 		compensateSpaces(&bufferRow2)
 
+		// Row 3, column 2: rain probability
 		bufferRow3.WriteString("R: ")
 		bufferRow3.WriteString(day.Rep[0]["PPd"])
 		bufferRow3.WriteString("% (")
@@ -134,7 +137,7 @@ func drawFiveDaysTable(root *structs.RootSiteRep) string {
 		bufferRow1.WriteString(" │")
 		bufferRow2.WriteString(" │")
 		bufferRow3.WriteString(" │")
-		bufferRow4.WriteString(" │")
+		bufferRow4.WriteString("│")
 
 		buffer.Write(bufferRow4.Bytes())
 		buffer.WriteRune('\n')
@@ -151,6 +154,7 @@ func drawFiveDaysTable(root *structs.RootSiteRep) string {
 		bufferRow1.Reset()
 		bufferRow2.Reset()
 		bufferRow3.Reset()
+		bufferRow4.Reset()
 	}
 
 	buffer.WriteString("╰─────┴────────────────────╯ \n```\n")
