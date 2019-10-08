@@ -51,7 +51,6 @@ func ProcessCommands(bot *tgbotapi.BotAPI, message *tgbotapi.Message, opts *stru
 			 /help - this command
 			 /add - add new place to watch
 			 /locations - list all the saved locations
-			 /forecast - collect the weather at current moment for all the saved places
 			 /about - information about this bot
 			 /deleteall - delete all saved places`
 		sendMsg(bot, chatID, html.EscapeString(help))
@@ -61,9 +60,6 @@ func ProcessCommands(bot *tgbotapi.BotAPI, message *tgbotapi.Message, opts *stru
 
 	case "start":
 		sendMsg(bot, chatID, "Hey! In order to begin, you should add at least one site location where you would like to observe a weather. Click /add")
-
-	case "forecast":
-		RequestWeatherForecast(bot, chatID, message.From.ID, opts)
 
 	case "locations":
 		PrintSavedLocations(bot, chatID, message.From.ID)
@@ -92,6 +88,7 @@ func DeleteLocations(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 	sendMsg(bot, message.Chat.ID, "Deleted")
 }
 
+// TODO: delete this methid, otherwise render weather forecast for a single locations when a button is clicked
 func RequestWeatherForecast(bot *tgbotapi.BotAPI, chatID int64, userID int, opts *structs.Opts) {
 
 	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
