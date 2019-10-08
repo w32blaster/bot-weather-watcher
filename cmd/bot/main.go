@@ -1,10 +1,12 @@
 package main
 
 import (
+	"github.com/jasonlvhit/gocron"
 	"github.com/w32blaster/bot-weather-watcher/structs"
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/caarlos0/env"
 	"github.com/w32blaster/bot-weather-watcher/command"
@@ -26,8 +28,11 @@ func main() {
 
 	bot.Debug = opts.IsDebug
 
-	// initiate the database structure
-	// db.Init()
+	// run scheduler
+	gocron.Every(1).Day().At("01:10").Loc(time.UTC).Do(func() {
+		command.CheckWeather(bot)
+	})
+	gocron.Start()
 
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 	updates := bot.ListenForWebhook("/" + bot.Token)

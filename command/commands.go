@@ -18,8 +18,10 @@ import (
 )
 
 const (
-	DbPath           = "weather.db"
-	LocationIDPrefix = "LocationID:"
+	DbPath               = "weather.db"
+	LocationIDPrefix     = "LocationID:"
+	ButtonDaysPrefix     = "D#"
+	ButtonLocationPrefix = "L#"
 )
 
 // ProcessCommands acts when user sent to a bot some command, for example "/command arg1 arg2"
@@ -141,25 +143,8 @@ func PrintSavedLocations(bot *tgbotapi.BotAPI, chatID int64, userID int) {
 	// load locations, build a map
 	mapLocs := getMapOfLocations(locations, db)
 
-	var buffer bytes.Buffer
-	buffer.WriteString("Saved locations: \n")
-	for i, e := range locations {
-		fmt.Printf(" %+v \n", e)
-
-		currentLoc := mapLocs[e.LocationID]
-		buffer.WriteString(strconv.Itoa(i) + ") ")
-		if len(currentLoc.NationalPark) > 0 {
-			buffer.WriteString(currentLoc.NationalPark)
-			buffer.WriteString(", ")
-		}
-		buffer.WriteString(currentLoc.Name)
-		buffer.WriteString(", ")
-		buffer.WriteString(currentLoc.Region)
-		buffer.WriteString(", UK")
-		buffer.WriteString("\n")
-	}
-
-	sendMsg(bot, chatID, buffer.String())
+	msg, _ := sendMsg(bot, chatID, "Here is your saved locations:")
+	renderLocationsButtons(bot, chatID, msg.MessageID, locations, mapLocs)
 }
 
 func getMapOfLocations(locations []structs.UsersLocationBookmark, db *storm.DB) map[string]structs.SiteLocation {
@@ -255,23 +240,39 @@ func ProcessButtonCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 	// expected data is "location id # date", for example
 	parts := strings.Split(callbackQuery.Data, "#")
 
+	if parts[0] == ButtonDaysPrefix {
+		renderOneDayDetailedWeatherForecast(bot, callbackQuery, db, opts, parts[1], parts[2])
+	}
+}
+
+func renderOneDayDetailedWeatherForecast(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, db *storm.DB, opts *structs.Opts, locationID, selectedDate string) {
+
 	var locations []structs.UsersLocationBookmark
-	db.Select(q.Eq("LocationID", parts[0]), q.Eq("UserID", callbackQuery.From.ID)).Limit(1).Find(&locations)
+	db.Select(q.Eq("LocationID", locationID), q.Eq("UserID", callbackQuery.From.ID)).Limit(1).Find(&locations)
 
 	// format the data
 	dateFormatted := "unknown date"
-	if t, err := time.Parse(layoutMetofficeDate, parts[1]); err == nil {
+	if t, err := time.Parse(layoutMetofficeDate, selectedDate); err == nil {
 		dateFormatted = t.Format("2 January 2006, Monday")
 	}
 
-	site := getMapOfLocations(locations, db)[parts[0]]
+	site := getMapOfLocations(locations, db)[locationID]
+
+	// Title
 	title := "*" + site.NationalPark + " " + site.Name + ", " + site.AuthArea + ", " + site.Region +
 		", UK*\n" + dateFormatted + "\n------\n\n"
 
 	// make request to MetOffice
-	root, err := get3HoursForecastFor(parts[0], opts)
+	root, err := get3HoursForecastFor(locationID, opts)
+	if err != nil {
+		log.Println(err.Error())
+		sendMsg(bot, callbackQuery.Message.Chat.ID, "Error retrieving data from MetOffice. Try again later")
+		return
+	}
+
+	// render all the data and plots
 	for _, day := range root.SiteRep.Dv.Location.Periods {
-		if day.Value == parts[1] {
+		if day.Value == selectedDate {
 
 			str := "Temperature: \n"
 			str = str + printDetailedPlotsForADay(day.Rep, "T", "˚C")
@@ -388,7 +389,37 @@ func renderButtonThatOpensInlineQuery(bot *tgbotapi.BotAPI, chatID int64, messag
 	bot.Send(keyboardMsg)
 }
 
-// renders the button "search for location"
+// renders the buttons for saved locations
+func renderLocationsButtons(bot *tgbotapi.BotAPI, chatID int64, messageID int, locations []structs.UsersLocationBookmark, mapLocs map[string]structs.SiteLocation) {
+
+	buttonRows := make([][]tgbotapi.InlineKeyboardButton, len(locations))
+	for i, e := range locations {
+
+		// assemble address (label) of a location
+		currentLoc := mapLocs[e.LocationID]
+		var buffer bytes.Buffer
+		buffer.WriteString(strconv.Itoa(i) + ") ")
+		if len(currentLoc.NationalPark) > 0 {
+			buffer.WriteString(currentLoc.NationalPark)
+			buffer.WriteString(", ")
+		}
+		buffer.WriteString(currentLoc.Name)
+		buffer.WriteString(", ")
+		buffer.WriteString(currentLoc.Region)
+		buffer.WriteString(", UK")
+
+		// add button to the row
+		buttonRows[i] = []tgbotapi.InlineKeyboardButton{
+			tgbotapi.NewInlineKeyboardButtonData(buffer.String(), ButtonLocationPrefix+"#"+e.LocationID),
+		}
+	}
+
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(buttonRows...)
+	keyboardMsg := tgbotapi.NewEditMessageReplyMarkup(chatID, messageID, keyboard)
+	bot.Send(keyboardMsg)
+}
+
+// renders the button row with days for detailed forecast
 func renderDetailedDatesButtons(bot *tgbotapi.BotAPI, chatID int64, messageID int, root *structs.RootSiteRep) {
 
 	rowButtons := make([]tgbotapi.InlineKeyboardButton, 5)
@@ -398,7 +429,7 @@ func renderDetailedDatesButtons(bot *tgbotapi.BotAPI, chatID int64, messageID in
 			text = t.Format("2/1")
 		}
 
-		rowButtons[i] = tgbotapi.NewInlineKeyboardButtonData(text, root.SiteRep.Dv.Location.ID+"#"+period.Value)
+		rowButtons[i] = tgbotapi.NewInlineKeyboardButtonData(text, ButtonDaysPrefix+"#"+root.SiteRep.Dv.Location.ID+"#"+period.Value)
 	}
 
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(rowButtons)
