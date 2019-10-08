@@ -155,7 +155,7 @@ func StartProcessAddingNewLocation(bot *tgbotapi.BotAPI, message *tgbotapi.Messa
 		return
 	}
 
-	if err := sm.CreateNewBookmark(); err != nil {
+	if err := sm.CreateNewBookmark(message.Chat.ID); err != nil {
 		log.Println(err.Error())
 		sendMsg(bot, message.Chat.ID, "Sorry, internal error occurred, please trt again later")
 		return

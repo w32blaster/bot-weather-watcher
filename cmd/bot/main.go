@@ -30,7 +30,7 @@ func main() {
 
 	// run scheduler
 	gocron.Every(1).Day().At("01:10").Loc(time.UTC).Do(func() {
-		command.CheckWeather(bot)
+		command.CheckWeather(bot, &opts)
 	})
 	gocron.Start()
 

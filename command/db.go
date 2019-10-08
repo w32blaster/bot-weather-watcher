@@ -6,7 +6,7 @@ import (
 	"github.com/w32blaster/bot-weather-watcher/structs"
 )
 
-func (sm *StateMachine) CreateNewBookmark() error {
+func (sm *StateMachine) CreateNewBookmark(chatID int64) error {
 
 	if bookmark := sm.GetUnfinishedBookmark(); bookmark != nil {
 		// the object already exists. Probably, user enters something wrong and decided to start again.
@@ -20,6 +20,7 @@ func (sm *StateMachine) CreateNewBookmark() error {
 		LowestTemp:   0,
 		MaxWindSpeed: 0,
 		IsReady:      false,
+		ChatID:       chatID,
 	})
 }
 

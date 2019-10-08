@@ -5,6 +5,7 @@ type (
 		ID           int    `storm:"id,increment"` // primary key
 		LocationID   string `storm:"index"`        // this field will be indexed
 		UserID       int    `storm:"index"`
+		ChatID       int64  // chat ID where to send notifications
 		MaxWindSpeed int
 		LowestTemp   int
 		IsReady      bool `storm:"index"`
