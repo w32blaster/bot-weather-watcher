@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"html"
-	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -14,8 +13,11 @@ import (
 	"github.com/asdine/storm"
 	"github.com/asdine/storm/codec/msgpack"
 	"github.com/asdine/storm/q"
+	"github.com/sirupsen/logrus"
 	tgbotapi "gopkg.in/telegram-bot-api.v4"
 )
+
+var log logrus.Entry
 
 const (
 	DbPath                = "weather.db"
@@ -26,12 +28,15 @@ const (
 	ButtonDeleteMsgPrefix = "dM"
 )
 
+func SetLog(entry *logrus.Entry) {
+	log = *entry
+}
+
 // ProcessCommands acts when user sent to a bot some command, for example "/command arg1 arg2"
 func ProcessCommands(bot *tgbotapi.BotAPI, message *tgbotapi.Message, opts *structs.Opts) {
 
 	chatID := message.Chat.ID
 	command := extractCommand(message.Command())
-	log.Println("This is command " + command)
 
 	switch command {
 
@@ -77,16 +82,17 @@ func ProcessCommands(bot *tgbotapi.BotAPI, message *tgbotapi.Message, opts *stru
 func DeleteLocations(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
 	if err != nil {
-		log.Printf("Error! Can't open the database, the error is %s", err.Error())
+		log.WithError(err).Warn("Can't open database")
 		sendMsg(bot, message.Chat.ID, "Sorry, internal error occurred, can't open a database. Please try again later.")
 		return
 	}
 	defer db.Close()
 
-	query := db.Select()
-	if err := query.Delete(new(structs.UsersLocationBookmark)); err != nil {
-		log.Println(err.Error())
+	if err := DeleteAllForThisUser(db, message.From.ID); err != nil {
+		log.WithError(err).WithField("user-id", message.From.ID).Error("Can't delete all user bookmarks (saved locations)")
 	}
+
+	log.WithField("user-id", message.From.ID).Info("User bookmarks were deleted")
 	sendMsg(bot, message.Chat.ID, "Deleted")
 }
 
@@ -94,7 +100,7 @@ func PrintSavedLocations(bot *tgbotapi.BotAPI, chatID int64, userID int) {
 
 	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
 	if err != nil {
-		log.Printf("Error! Can't open the database, the error is %s", err.Error())
+		log.WithError(err).Warn("Can't open database")
 		sendMsg(bot, chatID, "Sorry, internal error occurred, can't open a database. Please try again later.")
 		return
 	}
@@ -134,7 +140,7 @@ func getMapOfLocations(locations []structs.UsersLocationBookmark, db *storm.DB) 
 func StartProcessAddingNewLocation(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
 	if err != nil {
-		log.Printf("Error! Can't open the database, the error is %s", err.Error())
+		log.WithError(err).Warn("Can't open database")
 		sendMsg(bot, message.Chat.ID, "Sorry, internal error occurred, can't open a database. Please try again later.")
 		return
 	}
@@ -150,13 +156,13 @@ func StartProcessAddingNewLocation(bot *tgbotapi.BotAPI, message *tgbotapi.Messa
 	// and now start a new state machine
 	sm, err := LoadStateMachineFor(message.From.ID, db)
 	if err != nil {
-		log.Printf("Can't initiate a state machine. Error is %s", err.Error())
+		log.WithError(err).Warn("Can't initiate a state machine")
 		sendMsg(bot, message.Chat.ID, "Sorry, internal error occurred, please trt again later")
 		return
 	}
 
 	if err := sm.CreateNewBookmark(message.Chat.ID); err != nil {
-		log.Println(err.Error())
+		log.WithError(err).Warn("Can't create a new bookmark")
 		sendMsg(bot, message.Chat.ID, "Sorry, internal error occurred, please trt again later")
 		return
 	}
@@ -175,14 +181,14 @@ func ProcessPlainText(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 
 	if err != nil {
 		sendMsg(bot, message.Chat.ID, "Ouch, this is internal error, sorry")
-		log.Println("Error opening the database, err: " + err.Error())
+		log.WithError(err).Warn("Can't open database")
 		return
 	}
 
 	stateMachine, err := LoadStateMachineFor(message.From.ID, db)
 	if err != nil {
 		sendMsg(bot, message.Chat.ID, "Ouch, this is internal error, sorry")
-		log.Println("Error opening the database, err: " + err.Error())
+		log.WithError(err).Warn("Can't create state machine")
 		return
 	}
 
@@ -199,7 +205,7 @@ func ProcessButtonCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 
 	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
 	if err != nil {
-		log.Println(err.Error())
+		log.WithError(err).Warn("Can't open database")
 		sendMsg(bot, callbackQuery.Message.Chat.ID, "Whoops... error :(")
 		return
 	}
@@ -228,7 +234,8 @@ func deleteMessage(bot *tgbotapi.BotAPI, chatID int64, messageID string) {
 		msg := tgbotapi.NewDeleteMessage(chatID, intMessageID)
 		bot.Send(msg)
 	} else {
-		log.Println("Cannot delete message: " + err.Error())
+		log.WithError(err).WithField("message-id", messageID).
+			Warn("Can't delete message, because messageID is invalid")
 	}
 }
 
@@ -271,7 +278,12 @@ func renderOneDayDetailedWeatherForecast(bot *tgbotapi.BotAPI, callbackQuery *tg
 	// make request to MetOffice
 	root, err := get3HoursForecastFor(locationID, opts)
 	if err != nil {
-		log.Println(err.Error())
+
+		log.WithError(err).WithFields(logrus.Fields{
+			"location-id":   locationID,
+			"location-name": site.Name,
+		}).Warn("Can't get 3 hours forecast from metoffice")
+
 		sendMsg(bot, callbackQuery.Message.Chat.ID, "Error retrieving data from MetOffice. Try again later")
 		return
 	}
@@ -315,7 +327,7 @@ func renderOneDayDetailedWeatherForecast(bot *tgbotapi.BotAPI, callbackQuery *tg
 func ProcessInlineQuery(bot *tgbotapi.BotAPI, inlineQuery *tgbotapi.InlineQuery) {
 	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
 	if err != nil {
-		fmt.Println(err.Error())
+		log.WithError(err).Warn("Can't open database")
 		return
 	}
 	defer db.Close()
@@ -353,7 +365,17 @@ func ProcessInlineQuery(bot *tgbotapi.BotAPI, inlineQuery *tgbotapi.InlineQuery)
 	}
 
 	if resp, err := bot.AnswerInlineQuery(answer); err != nil {
-		log.Fatal("ERROR! bot.answerInlineQuery:", err, resp)
+
+		bytes, err2 := resp.Result.MarshalJSON()
+		if err2 != nil {
+			log.WithError(err2).Warn("I tried to parse JSON that was returned from bot, but couldn't. Empty array is used")
+			bytes = []byte{}
+		}
+
+		log.WithError(err).WithFields(logrus.Fields{
+			"description": resp.Description,
+			"raw-message": string(bytes),
+		}).Error("bot.answerInlineQuery")
 	}
 }
 

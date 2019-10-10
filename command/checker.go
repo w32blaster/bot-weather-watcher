@@ -3,13 +3,13 @@ package command
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"strconv"
 
 	"github.com/w32blaster/bot-weather-watcher/structs"
 
 	"github.com/asdine/storm"
 	"github.com/asdine/storm/codec/msgpack"
+	"github.com/sirupsen/logrus"
 	tgbotapi "gopkg.in/telegram-bot-api.v4"
 )
 
@@ -17,7 +17,7 @@ func CheckWeather(bot *tgbotapi.BotAPI, opts *structs.Opts) {
 
 	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
 	if err != nil {
-		log.Println("Error! " + err.Error())
+		log.WithError(err).Warn("Can't open database")
 		return
 	}
 	defer db.Close()
@@ -30,8 +30,11 @@ func CheckWeather(bot *tgbotapi.BotAPI, opts *structs.Opts) {
 
 		forecast, err := getDailyForecastFor(loc.LocationID, opts)
 		if err != nil {
-			log.Printf("Error! Can't get daily forecast for location %s because of error %s \n",
-				loc.LocationID, err.Error())
+			log.WithError(err).WithFields(logrus.Fields{
+				"location-id": loc.LocationID,
+				"id":          loc.ID,
+			}).Error("Can't get daily forecast from metoffice")
+
 			continue
 		}
 

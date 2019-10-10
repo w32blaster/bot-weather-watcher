@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/asdine/storm"
 	"github.com/w32blaster/bot-weather-watcher/structs"
-	"log"
 	"strconv"
 	"strings"
 )

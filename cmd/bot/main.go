@@ -1,14 +1,15 @@
 package main
 
 import (
-	"github.com/jasonlvhit/gocron"
-	"github.com/w32blaster/bot-weather-watcher/structs"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/w32blaster/bot-weather-watcher/structs"
+
 	"github.com/caarlos0/env"
+	"github.com/jasonlvhit/gocron"
+	log "github.com/sirupsen/logrus"
 	"github.com/w32blaster/bot-weather-watcher/command"
 	"gopkg.in/telegram-bot-api.v4"
 )
@@ -28,13 +29,23 @@ func main() {
 
 	bot.Debug = opts.IsDebug
 
+	if !opts.IsDebug {
+		// Log as JSON instead of the default ASCII formatter.
+		log.SetFormatter(&log.JSONFormatter{})
+	}
+
+	contextLogger := log.WithFields(log.Fields{
+		"app-name": "Bot Weather Watcher",
+	})
+	command.SetLog(contextLogger)
+
 	// run scheduler
 	gocron.Every(1).Day().At("01:10").Loc(time.UTC).Do(func() {
 		command.CheckWeather(bot, &opts)
 	})
 	gocron.Start()
 
-	log.Printf("Authorized on account %s", bot.Self.UserName)
+	contextLogger.WithField("username", bot.Self.UserName).Info("Authorized on account")
 	updates := bot.ListenForWebhook("/" + bot.Token)
 
 	go http.ListenAndServe(":"+strconv.Itoa(opts.Port), nil)

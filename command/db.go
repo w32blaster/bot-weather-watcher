@@ -49,7 +49,12 @@ func DeleteStateForUser(db *storm.DB, userID int) {
 	}
 }
 
-func DeleteAllUnfinishedBookmarksForThisUser(db *storm.DB, userID int) {
+func DeleteAllUnfinishedBookmarksForThisUser(db *storm.DB, userID int) error {
 	query := db.Select(q.Eq("UserID", userID), q.Eq("IsReady", false))
+	query.Delete(new(structs.UsersLocationBookmark))
+}
+
+func DeleteAllForThisUser(db *storm.DB, userID int) error {
+	query := db.Select(q.Eq("UserID", userID))
 	query.Delete(new(structs.UsersLocationBookmark))
 }
