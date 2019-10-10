@@ -13,6 +13,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     cmd/bot/main.go
 
 # and initiate database, populating it with the locations
+RUN mkdir -p storage
 RUN go build cmd/create-resources/main.go
 
 #

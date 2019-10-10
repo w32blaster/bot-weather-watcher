@@ -1,4 +1,4 @@
-package create_resources
+package main
 
 import (
 	"encoding/json"

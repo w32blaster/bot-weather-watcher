@@ -1,7 +1,5 @@
 migrate:
-	go build cmd/create-resources/main.go
-	./setup
-	rm ./setup
+	go run cmd/create-resources/main.go
 
 test:
 	go vet ./...
