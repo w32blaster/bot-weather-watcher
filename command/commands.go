@@ -20,7 +20,7 @@ import (
 var log logrus.Entry
 
 const (
-	DbPath                = "weather.db"
+	DbPath                = "storage/weather.db"
 	LocationIDPrefix      = "LocationID:"
 	Separator             = "#"
 	ButtonDaysPrefix      = "D"
