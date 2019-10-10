@@ -406,7 +406,8 @@ func sendMsg(bot *tgbotapi.BotAPI, chatID int64, textMarkdown string) (tgbotapi.
 	// send the message
 	resp, err := bot.Send(msg)
 	if err != nil {
-		log.Println("bot.Send:", err, resp)
+		log.WithError(err).
+			Error("error when we tried to send a message using bot.Send:")
 		return resp, err
 	}
 

@@ -55,7 +55,6 @@ var states = map[int]state{
 				return "Internal error: can't update state"
 			}
 
-			fmt.Printf("%+v", sm.GetUnfinishedBookmark())
 			return "Ok, now enter the max wind speed (mph) that is comfortable for you in that location"
 		},
 	},
@@ -72,7 +71,6 @@ var states = map[int]state{
 			sm.UpdateFieldInBookmark("MaxWindSpeed", intMaxWindSpeed)
 			sm.markNextStepState(StepEnterMinTemp)
 
-			fmt.Printf("%+v", sm.GetUnfinishedBookmark())
 			return "Go it, now send me lowest temperature (in ˚C) that suits for you "
 		},
 	},
@@ -92,7 +90,6 @@ var states = map[int]state{
 			sm.currentState = FINISHED
 			DeleteStateForUser(sm.db, sm.UserID)
 
-			fmt.Printf("%+v", sm.GetUnfinishedBookmark())
 			return "All done, this location was saved for you."
 		},
 	},
@@ -150,7 +147,9 @@ func (sm *StateMachine) loadState(userID int) (int, error) {
 			CurrentState: StepEnterLocation,
 		}
 		if err := sm.db.Save(&state); err != nil {
-			fmt.Printf("attempt to create a new state and persist in the database, but error occurred: %s \n", err.Error())
+			log.WithError(err).
+				WithField("user-id", userID).
+				Error("attempt to create a new state and persist it to the database")
 			return -1, err
 		}
 	}
