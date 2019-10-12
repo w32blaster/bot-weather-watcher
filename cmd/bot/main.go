@@ -34,23 +34,26 @@ func main() {
 		log.SetFormatter(&log.JSONFormatter{})
 	}
 
-	contextLogger := log.WithFields(log.Fields{
-		"app-name": "Bot Weather Watcher",
-	})
-	command.SetLog(contextLogger)
-
 	// run scheduler
 	gocron.Every(1).Day().At("01:10").Loc(time.UTC).Do(func() {
-		command.CheckWeather(bot, &opts)
+		command.CheckWeather(bot, &opts, -1)
 	})
 	gocron.Start()
 
-	contextLogger.WithField("username", bot.Self.UserName).Info("Authorized on account")
+	log.WithField("username", bot.Self.UserName).Info("Authorized on account")
 	updates := bot.ListenForWebhook("/" + bot.Token)
 
 	go http.ListenAndServe(":"+strconv.Itoa(opts.Port), nil)
 
 	for update := range updates {
+
+		// fill the context for logger
+		command.SetLog(log.WithFields(log.Fields{
+			"app-name":  "Bot Weather Watcher",
+			"user-id":   update.Message.From.ID,
+			"user-name": update.Message.From.UserName,
+			"chat-id":   update.Message.Chat.ID,
+		}))
 
 		if update.Message != nil {
 

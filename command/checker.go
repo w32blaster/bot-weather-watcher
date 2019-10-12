@@ -3,6 +3,7 @@ package command
 import (
 	"bytes"
 	"fmt"
+	"github.com/asdine/storm/q"
 	"strconv"
 
 	"github.com/w32blaster/bot-weather-watcher/structs"
@@ -13,19 +14,32 @@ import (
 	tgbotapi "gopkg.in/telegram-bot-api.v4"
 )
 
-func CheckWeather(bot *tgbotapi.BotAPI, opts *structs.Opts) {
+func CheckWeather(bot *tgbotapi.BotAPI, opts *structs.Opts, userID int) bool {
 
 	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
 	if err != nil {
 		log.WithError(err).Warn("Can't open database")
-		return
+		return false
 	}
 	defer db.Close()
 
 	var locations []structs.UsersLocationBookmark
-	db.All(&locations)
+	if userID == -1 {
+		err = db.All(&locations)
+	} else {
+		err = db.Select(q.And(
+			q.Eq("UserID", userID),
+			q.Eq("IsReady", true),
+		)).First(&locations)
+	}
+
+	if err != nil {
+		log.WithError(err).Error("Can't read bookmarks form DB")
+		return false
+	}
 
 	var buffer bytes.Buffer
+	wasFoundSomething := false
 	for _, loc := range locations {
 
 		forecast, err := getDailyForecastFor(loc.LocationID, opts)
@@ -64,8 +78,11 @@ func CheckWeather(bot *tgbotapi.BotAPI, opts *structs.Opts) {
 
 		if buffer.Len() > 0 {
 			sendMsg(bot, loc.ChatID, "Hey, good weather will be at: \n\n"+buffer.String())
+			wasFoundSomething = true
 		}
 
 		buffer.Reset()
 	}
+
+	return wasFoundSomething
 }

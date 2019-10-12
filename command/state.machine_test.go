@@ -30,7 +30,7 @@ func TestStateMachineStepByStep(t *testing.T) {
 
 	// Step 1
 	// When:
-	err = sm.CreateNewBookmark()
+	err = sm.CreateNewBookmark(-1)
 	assert.Nil(t, err)
 
 	// then:
@@ -83,7 +83,7 @@ func TestStateMachineForTwoUsers(t *testing.T) {
 
 	// State machine flow for user 1
 	sm, _ := LoadStateMachineFor(UserID, db)
-	sm.CreateNewBookmark()
+	sm.CreateNewBookmark(-1)
 	assert.Equal(t, StepEnterLocation, sm.currentState)
 
 	sm.ProcessNextState(LocationIDPrefix + TestLocationID)
@@ -97,7 +97,7 @@ func TestStateMachineForTwoUsers(t *testing.T) {
 
 	// Repeat the same for User 2
 	sm, _ = LoadStateMachineFor(User2ID, db)
-	sm.CreateNewBookmark()
+	sm.CreateNewBookmark(-1)
 	assert.Equal(t, StepEnterLocation, sm.currentState)
 
 	sm.ProcessNextState(LocationIDPrefix + TestLocationID)
@@ -139,7 +139,7 @@ func TestStateMachineForTwoUsersNotFinished(t *testing.T) {
 
 	// State machine flow for user 1
 	sm, _ := LoadStateMachineFor(UserID, db)
-	sm.CreateNewBookmark()
+	sm.CreateNewBookmark(-1)
 	assert.Equal(t, StepEnterLocation, sm.currentState)
 
 	sm.ProcessNextState(LocationIDPrefix + TestLocationID)
@@ -153,7 +153,7 @@ func TestStateMachineForTwoUsersNotFinished(t *testing.T) {
 
 	// Repeat the same for User 2
 	sm, _ = LoadStateMachineFor(User2ID, db)
-	sm.CreateNewBookmark()
+	sm.CreateNewBookmark(-1)
 	assert.Equal(t, StepEnterLocation, sm.currentState)
 
 	sm.ProcessNextState(LocationIDPrefix + TestLocationID)

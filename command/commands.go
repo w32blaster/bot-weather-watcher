@@ -49,21 +49,26 @@ func ProcessCommands(bot *tgbotapi.BotAPI, message *tgbotapi.Message, opts *stru
 		This bot works in UK only and uses data from metoffice.gov.uk
 
 		Please start with /start command.`
+		log.Info("About command was sent")
 		sendMsg(bot, chatID, about)
 
 	case "help":
 
 		help := `This bot supports the following commands:
-		     /start - shows start message
+			 /start - shows start message
 			 /help - this command
 			 /add - add new place to watch
 			 /locations - list all the saved locations
 			 /about - information about this bot
+			 /check - check the weather forecast for your bookmarks now
 			 /deleteall - delete all saved places`
 		sendMsg(bot, chatID, html.EscapeString(help))
 
 	case "add":
 		StartProcessAddingNewLocation(bot, message)
+
+	case "check":
+		CheckForecastForBookmarks(bot, message, opts)
 
 	case "start":
 		sendMsg(bot, chatID, "Hey! In order to begin, you should add at least one site location where you would like to observe a weather. Click /add")
@@ -76,6 +81,13 @@ func ProcessCommands(bot *tgbotapi.BotAPI, message *tgbotapi.Message, opts *stru
 
 	default:
 		sendMsg(bot, chatID, "Sorry, I don't recognize such command: "+command+", please call /help to get full list of commands I understand")
+	}
+}
+
+func CheckForecastForBookmarks(bot *tgbotapi.BotAPI, message *tgbotapi.Message, opts *structs.Opts) {
+	log.Info("The check command was called")
+	if wasFound := CheckWeather(bot, opts, message.From.ID); !wasFound {
+		sendMsg(bot, message.Chat.ID, "Sorry, only bad weather in the nearest time ⛈")
 	}
 }
 
