@@ -68,7 +68,21 @@ func CheckWeather(bot *tgbotapi.BotAPI, opts *structs.Opts, userID int) bool {
 				precProbab = intPpd
 			}
 
-			if feelsLikeDayTemp > loc.LowestTemp && windNoon < loc.MaxWindSpeed && precProbab < 40 {
+			isSuitableWeather := feelsLikeDayTemp > loc.LowestTemp && windNoon < loc.MaxWindSpeed && precProbab < 40
+
+			log.WithFields(logrus.Fields{
+				"date":                   day.Value,
+				"for-user":               loc.UserID,
+				"location":               forecast.SiteRep.Dv.Location.Name,
+				"temp-feels-like":        feelsLikeDayTemp,
+				"temp-min-desired":       loc.LowestTemp,
+				"wind-speed":             windNoon,
+				"wind-speed-max-desired": loc.MaxWindSpeed,
+				"precip-prob":            precProbab,
+				"is-suitable":            isSuitableWeather,
+			}).Info("Checker was called the forecast")
+
+			if isSuitableWeather {
 				buffer.WriteString(
 					fmt.Sprintf(" - in %s at %s (day temp %d˚C, wind is %d mpg and precipitation probability is %d) \n",
 						forecast.SiteRep.Dv.Location.Name, day.Value, feelsLikeDayTemp, windNoon, precProbab),
