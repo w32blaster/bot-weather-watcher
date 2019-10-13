@@ -47,15 +47,16 @@ func main() {
 
 	for update := range updates {
 
-		// fill the context for logger
-		command.SetLog(log.WithFields(log.Fields{
-			"app-name":  "Bot Weather Watcher",
-			"user-id":   update.Message.From.ID,
-			"user-name": update.Message.From.UserName,
-			"chat-id":   update.Message.Chat.ID,
-		}))
-
 		if update.Message != nil {
+
+			command.SetLog(log.WithFields(log.Fields{
+				"app-name":  "Bot Weather Watcher",
+				"user-id":   update.Message.From.ID,
+				"user-name": update.Message.From.UserName,
+				"chat-id":   update.Message.Chat.ID,
+				"action":    "message",
+				"raw-text":  update.Message.Text,
+			}))
 
 			if update.Message.IsCommand() {
 
@@ -70,10 +71,26 @@ func main() {
 
 		} else if update.CallbackQuery != nil {
 
+			command.SetLog(log.WithFields(log.Fields{
+				"app-name":  "Bot Weather Watcher",
+				"user-id":   update.CallbackQuery.From.ID,
+				"user-name": update.CallbackQuery.From.UserName,
+				"action":    "button-clicked",
+				"raw-text":  update.CallbackQuery.Data,
+			}))
+
 			// this is the callback after a button click
 			command.ProcessButtonCallback(bot, update.CallbackQuery, &opts)
 
 		} else if update.InlineQuery != nil {
+
+			command.SetLog(log.WithFields(log.Fields{
+				"app-name":  "Bot Weather Watcher",
+				"user-id":   update.InlineQuery.From.ID,
+				"user-name": update.InlineQuery.From.UserName,
+				"action":    "inline-query",
+				"raw-text":  update.InlineQuery.Query,
+			}))
 
 			// this is inline query (it's like a suggestion while typing)
 			command.ProcessInlineQuery(bot, update.InlineQuery)
