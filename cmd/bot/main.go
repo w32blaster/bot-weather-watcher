@@ -8,10 +8,10 @@ import (
 	"github.com/w32blaster/bot-weather-watcher/structs"
 
 	"github.com/caarlos0/env"
+	"github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/jasonlvhit/gocron"
 	log "github.com/sirupsen/logrus"
 	"github.com/w32blaster/bot-weather-watcher/command"
-	"gopkg.in/telegram-bot-api.v4"
 )
 
 func main() {
@@ -42,7 +42,6 @@ func main() {
 
 	log.WithField("username", bot.Self.UserName).Info("Authorized on account")
 	updates := bot.ListenForWebhook("/" + bot.Token)
-
 	go http.ListenAndServe(":"+strconv.Itoa(opts.Port), nil)
 
 	for update := range updates {

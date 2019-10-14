@@ -10,8 +10,8 @@ import (
 
 	"github.com/asdine/storm"
 	"github.com/asdine/storm/codec/msgpack"
+	"github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/sirupsen/logrus"
-	tgbotapi "gopkg.in/telegram-bot-api.v4"
 )
 
 func CheckWeather(bot *tgbotapi.BotAPI, opts *structs.Opts, userID int) bool {

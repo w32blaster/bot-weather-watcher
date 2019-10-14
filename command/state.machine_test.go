@@ -82,7 +82,7 @@ func TestStateMachineForTwoUsers(t *testing.T) {
 	defer db.Close()
 
 	// State machine flow for user 1
-	sm, _ := LoadStateMachineFor(UserID, db)
+	sm, _ := LoadStateMachineFor(nil, UserID, db)
 	sm.CreateNewBookmark(-1)
 	assert.Equal(t, StepEnterLocation, sm.currentState)
 
@@ -96,7 +96,7 @@ func TestStateMachineForTwoUsers(t *testing.T) {
 	assert.Equal(t, FINISHED, sm.currentState)
 
 	// Repeat the same for User 2
-	sm, _ = LoadStateMachineFor(User2ID, db)
+	sm, _ = LoadStateMachineFor(nil, User2ID, db)
 	sm.CreateNewBookmark(-1)
 	assert.Equal(t, StepEnterLocation, sm.currentState)
 
@@ -138,7 +138,7 @@ func TestStateMachineForTwoUsersNotFinished(t *testing.T) {
 	defer db.Close()
 
 	// State machine flow for user 1
-	sm, _ := LoadStateMachineFor(UserID, db)
+	sm, _ := LoadStateMachineFor(nil, UserID, db)
 	sm.CreateNewBookmark(-1)
 	assert.Equal(t, StepEnterLocation, sm.currentState)
 
@@ -152,7 +152,7 @@ func TestStateMachineForTwoUsersNotFinished(t *testing.T) {
 	assert.Equal(t, FINISHED, sm.currentState)
 
 	// Repeat the same for User 2
-	sm, _ = LoadStateMachineFor(User2ID, db)
+	sm, _ = LoadStateMachineFor(nil, User2ID, db)
 	sm.CreateNewBookmark(-1)
 	assert.Equal(t, StepEnterLocation, sm.currentState)
 

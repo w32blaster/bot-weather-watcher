@@ -13,8 +13,8 @@ import (
 	"github.com/asdine/storm"
 	"github.com/asdine/storm/codec/msgpack"
 	"github.com/asdine/storm/q"
+	"github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/sirupsen/logrus"
-	tgbotapi "gopkg.in/telegram-bot-api.v4"
 )
 
 var log logrus.Entry
@@ -166,7 +166,7 @@ func StartProcessAddingNewLocation(bot *tgbotapi.BotAPI, message *tgbotapi.Messa
 	DeleteAllUnfinishedBookmarksForThisUser(db, message.From.ID)
 
 	// and now start a new state machine
-	sm, err := LoadStateMachineFor(message.From.ID, db)
+	sm, err := LoadStateMachineFor(bot, message.Chat.ID, message.From.ID, db)
 	if err != nil {
 		log.WithError(err).Warn("Can't initiate a state machine")
 		sendMsg(bot, message.Chat.ID, "Sorry, internal error occurred, please trt again later")
@@ -197,15 +197,14 @@ func ProcessPlainText(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 		return
 	}
 
-	stateMachine, err := LoadStateMachineFor(message.From.ID, db)
+	stateMachine, err := LoadStateMachineFor(bot, message.Chat.ID, message.From.ID, db)
 	if err != nil {
 		sendMsg(bot, message.Chat.ID, "Ouch, this is internal error, sorry")
 		log.WithError(err).Warn("Can't create state machine")
 		return
 	}
 
-	msg := stateMachine.ProcessNextState(message.Text)
-	sendMsg(bot, message.Chat.ID, msg)
+	stateMachine.ProcessNextState(message.Text)
 }
 
 func ProcessButtonCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, opts *structs.Opts) {

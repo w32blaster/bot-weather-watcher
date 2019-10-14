@@ -9,6 +9,7 @@ type (
 		MaxWindSpeed int
 		LowestTemp   int
 		IsReady      bool `storm:"index"`
+		CheckPeriod  int
 	}
 
 	UserState struct {
