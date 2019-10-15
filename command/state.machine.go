@@ -17,8 +17,8 @@ const (
 	StepEnterMinTemp      = 3
 	StepSpecifyDays       = 4
 	FINISHED              = -1
-	buttonOnlyWeekends    = "Only weekends"
-	buttonAllDays         = "All days"
+	buttonOnlyWeekends    = 0
+	buttonAllDays         = 1
 )
 
 type (
@@ -35,11 +35,6 @@ type (
 		chatID       int64
 	}
 )
-
-var checkPeriods = map[string]int{
-	buttonAllDays:      0,
-	buttonOnlyWeekends: 1,
-}
 
 var states = map[int]state{
 
@@ -72,7 +67,7 @@ var states = map[int]state{
 				return
 			}
 
-			sendMsg(sm.bot, sm.chatID, "Ok, now enter the max wind speed (mph) that is comfortable for you in that location")
+			sendMsg(sm.bot, sm.chatID, "Ok, now enter the max wind speed that is comfortable for you in that location. \n\n Enter max wind speed (mph):")
 		},
 	},
 
@@ -89,7 +84,7 @@ var states = map[int]state{
 			sm.UpdateFieldInBookmark("MaxWindSpeed", intMaxWindSpeed)
 			sm.markNextStepState(StepEnterMinTemp)
 
-			sendMsg(sm.bot, sm.chatID, "Go it, now send me lowest temperature (in ˚C) that suits for you ")
+			sendMsg(sm.bot, sm.chatID, "Go it, now I'd like to know the lowest temperature that suits for you. \n\n Enter the lowest temperature (in ˚C):")
 		},
 	},
 
@@ -106,29 +101,38 @@ var states = map[int]state{
 			sm.UpdateFieldInBookmark("LowestTemp", intMinTemp)
 			sm.markNextStepState(StepSpecifyDays)
 
-			msg := tgbotapi.NewMessage(sm.chatID, "Desired temperature is saved. The last step, what days do you want to observe? Only weekends (makes sense if you "+
+			msg, _ := sendMsg(sm.bot, sm.chatID, "Desired temperature is saved. The last step, what days do you want to observe? Only weekends (makes sense if you "+
 				"on work during weekdays) or whole week (when you have a vacation or you have flexible time schedule)?")
-			msg.ParseMode = "Markdown"
-			msg.ReplyMarkup = tgbotapi.NewReplyKeyboard(
-				[]tgbotapi.KeyboardButton{
-					tgbotapi.NewKeyboardButton(buttonOnlyWeekends),
-					tgbotapi.NewKeyboardButton(buttonAllDays),
-				},
-			)
-			sm.bot.Send(msg)
+
+			rowButtons := []tgbotapi.InlineKeyboardButton{
+				tgbotapi.NewInlineKeyboardButtonData("Only Weekdays", ButtonChoiceAllDaysOrWeekends+Separator+strconv.Itoa(buttonOnlyWeekends)),
+				tgbotapi.NewInlineKeyboardButtonData("All days", ButtonChoiceAllDaysOrWeekends+Separator+strconv.Itoa(buttonAllDays)),
+			}
+
+			keyboard := tgbotapi.NewInlineKeyboardMarkup(rowButtons)
+			keyboardMsg := tgbotapi.NewEditMessageReplyMarkup(sm.chatID, msg.MessageID, keyboard)
+			sm.bot.Send(keyboardMsg)
 		},
 	},
 
 	StepSpecifyDays: {
 		next: FINISHED,
 		fnProcess: func(rawMessage string, sm *StateMachine) {
-			isValid := rawMessage == buttonOnlyWeekends || rawMessage == buttonAllDays
-			if !isValid {
+
+			intChoice, err := strconv.Atoi(rawMessage)
+			if err != nil {
 				sendMsg(sm.bot, sm.chatID, "Please click one of two buttons provided below")
+				log.WithError(err).Error("State machine: step for days specifying; we asked a user to choose ALL DAYS or ONLY WEEKENDS and waited for a response, but can't parse response")
 				return
 			}
 
-			sm.UpdateFieldInBookmark("CheckPeriod", checkPeriods[rawMessage])
+			if intChoice != buttonAllDays && intChoice != buttonOnlyWeekends {
+				sendMsg(sm.bot, sm.chatID, "Please click one of two buttons provided below")
+				log.WithField("response", intChoice).Error("State machine: step for days specifying; we waited for a response only 1 or 0")
+				return
+			}
+
+			sm.UpdateFieldInBookmark("CheckPeriod", intChoice)
 			sm.UpdateFieldInBookmark("IsReady", true)
 
 			sm.currentState = FINISHED

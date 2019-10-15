@@ -84,7 +84,7 @@ func CheckWeather(bot *tgbotapi.BotAPI, opts *structs.Opts, userID int) bool {
 
 			if isSuitableWeather {
 				buffer.WriteString(
-					fmt.Sprintf(" - in %s at %s (day temp %d˚C, wind is %d mpg and precipitation probability is %d) \n",
+					fmt.Sprintf(" - in %s at %s (day temp %d˚C, wind is %d mpg and precipitation probability is %d%%) \n",
 						forecast.SiteRep.Dv.Location.Name, day.Value, feelsLikeDayTemp, windNoon, precProbab),
 				)
 			}

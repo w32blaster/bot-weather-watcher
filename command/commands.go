@@ -20,12 +20,13 @@ import (
 var log logrus.Entry
 
 const (
-	DbPath                = "storage/weather.db"
-	LocationIDPrefix      = "LocationID:"
-	Separator             = "#"
-	ButtonDaysPrefix      = "D"
-	ButtonLocationPrefix  = "L"
-	ButtonDeleteMsgPrefix = "dM"
+	DbPath                        = "storage/weather.db"
+	LocationIDPrefix              = "LocationID:"
+	Separator                     = "#"
+	ButtonChoiceAllDaysOrWeekends = "W"  // for buttons "all days" or "weekdays only"
+	ButtonDaysPrefix              = "D"  // for buttons with days for detailed forecast
+	ButtonLocationPrefix          = "L"  // for button "start searching for location
+	ButtonDeleteMsgPrefix         = "dM" // for button "delete message"
 )
 
 func SetLog(entry *logrus.Entry) {
@@ -237,6 +238,17 @@ func ProcessButtonCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 
 		// delete message
 		deleteMessage(bot, callbackQuery.Message.Chat.ID, parts[1])
+	} else if parts[0] == ButtonChoiceAllDaysOrWeekends {
+
+		// this is part of new location adding steps, where user should select "all days" or "only weekend"; so use state machine
+		stateMachine, err := LoadStateMachineFor(bot, callbackQuery.Message.Chat.ID, callbackQuery.Message.From.ID, db)
+		if err != nil {
+			sendMsg(bot, callbackQuery.Message.Chat.ID, "Ouch, this is internal error, sorry")
+			log.WithError(err).Warn("Can't create state machine")
+			return
+		}
+
+		stateMachine.ProcessNextState(parts[1])
 	}
 }
 
