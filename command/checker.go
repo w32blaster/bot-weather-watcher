@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/asdine/storm/q"
 	"strconv"
+	"time"
 
 	"github.com/w32blaster/bot-weather-watcher/structs"
 
@@ -16,25 +17,8 @@ import (
 
 func CheckWeather(bot *tgbotapi.BotAPI, opts *structs.Opts, userID int) bool {
 
-	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
-	if err != nil {
-		log.WithError(err).Warn("Can't open database")
-		return false
-	}
-	defer db.Close()
-
-	var locations []structs.UsersLocationBookmark
-	if userID == -1 {
-		err = db.All(&locations)
-	} else {
-		err = db.Select(q.And(
-			q.Eq("UserID", userID),
-			q.Eq("IsReady", true),
-		)).First(&locations)
-	}
-
-	if err != nil {
-		log.WithError(err).Error("Can't read bookmarks form DB")
+	locations, ok := getBookmarksFromDatabase(userID)
+	if !ok {
 		return false
 	}
 
@@ -54,6 +38,17 @@ func CheckWeather(bot *tgbotapi.BotAPI, opts *structs.Opts, userID int) bool {
 
 		// iterate over days
 		for _, day := range forecast.SiteRep.Dv.Location.Periods {
+
+			// parse date
+			t, err := time.Parse(layoutMetofficeDate, day.Value)
+			if err != nil {
+				log.WithError(err).Error("Can't parse date from the bookmark, this day is ignored from checking")
+				continue
+			}
+
+			if !shouldBotherForWeekdays(loc.CheckPeriod, t.Weekday()) {
+				continue
+			}
 
 			// REFINE THIS LOGIC!
 			var feelsLikeDayTemp, windNoon, precProbab int
@@ -99,4 +94,42 @@ func CheckWeather(bot *tgbotapi.BotAPI, opts *structs.Opts, userID int) bool {
 	}
 
 	return wasFoundSomething
+}
+
+func getBookmarksFromDatabase(userID int) ([]structs.UsersLocationBookmark, bool) {
+
+	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
+	if err != nil {
+		log.WithError(err).Warn("Can't open database")
+		return nil, false
+	}
+	defer db.Close()
+
+	var locations []structs.UsersLocationBookmark
+	if userID == -1 {
+
+		// find all ready bookmarks
+		err = db.Find("IsReady", true, &locations)
+	} else {
+
+		// find all the bookrmarks for the given user
+		err = db.Select(q.And(
+			q.Eq("UserID", userID),
+			q.Eq("IsReady", true),
+		)).Find(&locations)
+	}
+
+	if err != nil {
+		log.WithError(err).Error("Can't read bookmarks form DB")
+		return nil, false
+	}
+
+	return locations, true
+}
+
+// shortcut function, checks should we bother a customer in a specific day depending on his/her
+// preferences
+// Please refer to unit tests
+func shouldBotherForWeekdays(dayChoice int, weekday time.Weekday) bool {
+	return !(dayChoice == onlyWeekends && weekday != time.Friday && weekday != time.Saturday && weekday != time.Sunday)
 }

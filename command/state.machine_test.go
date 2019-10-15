@@ -24,7 +24,7 @@ func TestStateMachineStepByStep(t *testing.T) {
 	defer db.Close()
 
 	// When:
-	sm, err := LoadStateMachineFor(UserID, db)
+	sm, err := LoadStateMachineFor(nil, 1, UserID, db)
 	assert.Nil(t, err)
 	assert.NotNil(t, sm)
 
@@ -38,24 +38,21 @@ func TestStateMachineStepByStep(t *testing.T) {
 
 	// Step 2
 	// When:
-	msg := sm.ProcessNextState(LocationIDPrefix + TestLocationID)
-	assert.NotEmpty(t, msg)
+	sm.ProcessNextState(LocationIDPrefix + TestLocationID)
 
 	// then:
 	assert.Equal(t, StepEnterMaxWindSpeed, sm.currentState)
 
 	// Step 3
 	// When:
-	msg = sm.ProcessNextState("20")
-	assert.NotEmpty(t, msg)
+	sm.ProcessNextState("20")
 
 	// then:
 	assert.Equal(t, StepEnterMinTemp, sm.currentState)
 
 	// Step 4
 	// When:
-	msg = sm.ProcessNextState("10")
-	assert.NotEmpty(t, msg)
+	sm.ProcessNextState("10")
 
 	// then:
 	assert.Equal(t, FINISHED, sm.currentState)
@@ -82,7 +79,7 @@ func TestStateMachineForTwoUsers(t *testing.T) {
 	defer db.Close()
 
 	// State machine flow for user 1
-	sm, _ := LoadStateMachineFor(nil, UserID, db)
+	sm, _ := LoadStateMachineFor(nil, 0, UserID, db)
 	sm.CreateNewBookmark(-1)
 	assert.Equal(t, StepEnterLocation, sm.currentState)
 
@@ -96,7 +93,7 @@ func TestStateMachineForTwoUsers(t *testing.T) {
 	assert.Equal(t, FINISHED, sm.currentState)
 
 	// Repeat the same for User 2
-	sm, _ = LoadStateMachineFor(nil, User2ID, db)
+	sm, _ = LoadStateMachineFor(nil, 0, User2ID, db)
 	sm.CreateNewBookmark(-1)
 	assert.Equal(t, StepEnterLocation, sm.currentState)
 
@@ -138,7 +135,7 @@ func TestStateMachineForTwoUsersNotFinished(t *testing.T) {
 	defer db.Close()
 
 	// State machine flow for user 1
-	sm, _ := LoadStateMachineFor(nil, UserID, db)
+	sm, _ := LoadStateMachineFor(nil, 1, UserID, db)
 	sm.CreateNewBookmark(-1)
 	assert.Equal(t, StepEnterLocation, sm.currentState)
 
@@ -152,7 +149,7 @@ func TestStateMachineForTwoUsersNotFinished(t *testing.T) {
 	assert.Equal(t, FINISHED, sm.currentState)
 
 	// Repeat the same for User 2
-	sm, _ = LoadStateMachineFor(nil, User2ID, db)
+	sm, _ = LoadStateMachineFor(nil, 1, User2ID, db)
 	sm.CreateNewBookmark(-1)
 	assert.Equal(t, StepEnterLocation, sm.currentState)
 

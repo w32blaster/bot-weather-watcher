@@ -17,8 +17,8 @@ const (
 	StepEnterMinTemp      = 3
 	StepSpecifyDays       = 4
 	FINISHED              = -1
-	buttonOnlyWeekends    = 0
-	buttonAllDays         = 1
+	onlyWeekends          = 0
+	allDays               = 1
 )
 
 type (
@@ -105,8 +105,8 @@ var states = map[int]state{
 				"on work during weekdays) or whole week (when you have a vacation or you have flexible time schedule)?")
 
 			rowButtons := []tgbotapi.InlineKeyboardButton{
-				tgbotapi.NewInlineKeyboardButtonData("Only Weekdays", ButtonChoiceAllDaysOrWeekends+Separator+strconv.Itoa(buttonOnlyWeekends)),
-				tgbotapi.NewInlineKeyboardButtonData("All days", ButtonChoiceAllDaysOrWeekends+Separator+strconv.Itoa(buttonAllDays)),
+				tgbotapi.NewInlineKeyboardButtonData("Only Weekdays", ButtonChoiceAllDaysOrWeekends+Separator+strconv.Itoa(onlyWeekends)),
+				tgbotapi.NewInlineKeyboardButtonData("All days", ButtonChoiceAllDaysOrWeekends+Separator+strconv.Itoa(allDays)),
 			}
 
 			keyboard := tgbotapi.NewInlineKeyboardMarkup(rowButtons)
@@ -126,7 +126,7 @@ var states = map[int]state{
 				return
 			}
 
-			if intChoice != buttonAllDays && intChoice != buttonOnlyWeekends {
+			if intChoice != allDays && intChoice != onlyWeekends {
 				sendMsg(sm.bot, sm.chatID, "Please click one of two buttons provided below")
 				log.WithField("response", intChoice).Error("State machine: step for days specifying; we waited for a response only 1 or 0")
 				return
