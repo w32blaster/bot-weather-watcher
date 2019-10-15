@@ -43,26 +43,26 @@ func ProcessCommands(bot *tgbotapi.BotAPI, message *tgbotapi.Message, opts *stru
 
 	case "about":
 		about := `The bot is designed to notify you when the weather in selected places will be nice within 3 days.
-		This can be helpful for everyone who tries to avoid rain and windy weather, such as motorcyclists, photographers, hikers and so on.
-		Simply save few places you are interested in, specify range of wind speed and temperature range and the bot will notify you
-		when a weather forecast matches your expectations. Have fun.
+This can be helpful for everyone who tries to avoid rain and windy weather, such as motorcyclists, photographers, hikers and so on.
+Simply save few places you are interested in, specify range of wind speed and temperature range and the bot will notify you
+when a weather forecast matches your expectations. Have fun.
 
-		This bot works in UK only and uses data from metoffice.gov.uk
+This bot works in UK only and uses data from metoffice.gov.uk
 
-		Please start with /start command.`
+Please start with /start command.`
 		log.Info("About command was sent")
 		sendMsg(bot, chatID, about)
 
 	case "help":
 
 		help := `This bot supports the following commands:
-			 /start - shows start message
-			 /help - this command
-			 /add - add new place to watch
-			 /locations - list all the saved locations
-			 /about - information about this bot
-			 /check - check the weather forecast for your bookmarks now
-			 /deleteall - delete all saved places`
+ /start - shows start message
+ /help - this command
+ /add - add new place to watch
+ /locations - list all the saved locations
+ /about - information about this bot
+ /check - check the weather forecast for your bookmarks now
+ /deleteall - delete all saved places`
 		sendMsg(bot, chatID, html.EscapeString(help))
 
 	case "add":
@@ -241,7 +241,7 @@ func ProcessButtonCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 	} else if parts[0] == ButtonChoiceAllDaysOrWeekends {
 
 		// this is part of new location adding steps, where user should select "all days" or "only weekend"; so use state machine
-		stateMachine, err := LoadStateMachineFor(bot, callbackQuery.Message.Chat.ID, callbackQuery.Message.From.ID, db)
+		stateMachine, err := LoadStateMachineFor(bot, callbackQuery.Message.Chat.ID, callbackQuery.From.ID, db)
 		if err != nil {
 			sendMsg(bot, callbackQuery.Message.Chat.ID, "Ouch, this is internal error, sorry")
 			log.WithError(err).Warn("Can't create state machine")
