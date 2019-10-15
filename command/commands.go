@@ -490,16 +490,31 @@ func renderLocationsButtons(bot *tgbotapi.BotAPI, chatID int64, messageID int, l
 // renders the button row with days for detailed forecast
 func renderDetailedDatesButtons(bot *tgbotapi.BotAPI, chatID int64, messageID int, root *structs.RootSiteRep) {
 
-	rowDaysButtons := make([]tgbotapi.InlineKeyboardButton, 5)
+	// Row 1
+	rowDaysButtonsRow1 := make([]tgbotapi.InlineKeyboardButton, 2)
 	strMessageID := strconv.Itoa(messageID)
 
-	for i, period := range root.SiteRep.Dv.Location.Periods {
+	for i := 0; i < 2; i++ {
+		period := root.SiteRep.Dv.Location.Periods[i]
 		text := "NaN"
 		if t, err := time.Parse(layoutMetofficeDate, period.Value); err == nil {
-			text = t.Format("2/1")
+			text = t.Format("2 Jan")
 		}
 
-		rowDaysButtons[i] = tgbotapi.NewInlineKeyboardButtonData(text,
+		rowDaysButtonsRow1[i] = tgbotapi.NewInlineKeyboardButtonData(text,
+			ButtonDaysPrefix+Separator+root.SiteRep.Dv.Location.ID+Separator+period.Value+Separator+strMessageID)
+	}
+
+	rowDaysButtonsRow2 := make([]tgbotapi.InlineKeyboardButton, 3)
+
+	for i := 2; i < 5; i++ {
+		period := root.SiteRep.Dv.Location.Periods[i]
+		text := "NaN"
+		if t, err := time.Parse(layoutMetofficeDate, period.Value); err == nil {
+			text = t.Format("2 Jan")
+		}
+
+		rowDaysButtonsRow2[i-2] = tgbotapi.NewInlineKeyboardButtonData(text,
 			ButtonDaysPrefix+Separator+root.SiteRep.Dv.Location.ID+Separator+period.Value+Separator+strMessageID)
 	}
 
@@ -507,7 +522,7 @@ func renderDetailedDatesButtons(bot *tgbotapi.BotAPI, chatID int64, messageID in
 		tgbotapi.NewInlineKeyboardButtonData("❌ Close", ButtonDeleteMsgPrefix+Separator+strMessageID),
 	}
 
-	keyboard := tgbotapi.NewInlineKeyboardMarkup(rowDaysButtons, rowCloseButton)
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(rowDaysButtonsRow1, rowDaysButtonsRow2, rowCloseButton)
 	keyboardMsg := tgbotapi.NewEditMessageReplyMarkup(chatID, messageID, keyboard)
 	bot.Send(keyboardMsg)
 }
