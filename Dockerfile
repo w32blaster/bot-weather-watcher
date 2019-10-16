@@ -13,8 +13,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     cmd/bot/main.go
 
 # and initiate database, populating it with the locations
-RUN mkdir -p storage
-RUN go run cmd/create-resources/main.go
+# RUN mkdir -p storage
+# RUN go run cmd/create-resources/main.go
 
 #
 # Phase 2: prepare the runtime container, ready for production
