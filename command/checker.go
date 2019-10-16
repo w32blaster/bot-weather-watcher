@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/asdine/storm/q"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/w32blaster/bot-weather-watcher/structs"
@@ -14,6 +15,8 @@ import (
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/sirupsen/logrus"
 )
+
+const precipProbRain = 40 // min precipitation probability when we assume that will be rainy day
 
 func CheckWeather(bot *tgbotapi.BotAPI, opts *structs.Opts, userID int) bool {
 
@@ -50,25 +53,17 @@ func CheckWeather(bot *tgbotapi.BotAPI, opts *structs.Opts, userID int) bool {
 				continue
 			}
 
-			// REFINE THIS LOGIC!
-			var feelsLikeDayTemp, windNoon, precProbab int
+			feelsLikeDayTemp, windNoon, precProbab, weatherType := parseNumberFigures(day)
 
-			if intFrm, err := strconv.Atoi(day.Rep[0]["FDm"]); err == nil {
-				feelsLikeDayTemp = intFrm
-			}
-			if intGn, err := strconv.Atoi(day.Rep[0]["Gn"]); err == nil {
-				windNoon = intGn
-			}
-			if intPpd, err := strconv.Atoi(day.Rep[0]["PPd"]); err == nil {
-				precProbab = intPpd
-			}
-
-			isSuitableWeather := feelsLikeDayTemp > loc.LowestTemp && windNoon < loc.MaxWindSpeed && precProbab < 40
+			// decide whether current weather is that "good" or "naaah"
+			isSuitableWeather := feelsLikeDayTemp > loc.LowestTemp &&
+				windNoon < loc.MaxWindSpeed &&
+				precProbab < precipProbRain
 
 			log.WithFields(logrus.Fields{
 				"date":                   day.Value,
-				"for-user":               loc.UserID,
-				"location":               forecast.SiteRep.Dv.Location.Name,
+				"bookmark-owner":         loc.UserID,
+				"bookmark-location":      forecast.SiteRep.Dv.Location.Name,
 				"temp-feels-like":        feelsLikeDayTemp,
 				"temp-min-desired":       loc.LowestTemp,
 				"wind-speed":             windNoon,
@@ -79,10 +74,18 @@ func CheckWeather(bot *tgbotapi.BotAPI, opts *structs.Opts, userID int) bool {
 
 			if isSuitableWeather {
 				buffer.WriteString(
-					fmt.Sprintf(" - in %s at %s (day temp %d˚C, wind is %d mpg and precipitation probability is %d%%) \n",
-						forecast.SiteRep.Dv.Location.Name, day.Value, feelsLikeDayTemp, windNoon, precProbab),
+					fmt.Sprintf(" - %c in %s at %s (day temp %d˚C, wind is %dmph and precipitation probability is %d%%) \n",
+						mapWeatherTypes[weatherType].icon,
+						strings.Title(strings.ToLower(forecast.SiteRep.Dv.Location.Name)),
+						t.Format("02 Jan 2006, Mon"),
+						feelsLikeDayTemp,
+						windNoon,
+						precProbab),
 				)
 			}
+
+			// just to avoid any dDOS filters block us :) we are not in a hurry
+			time.Sleep(1 * time.Second)
 		}
 
 		if buffer.Len() > 0 {
@@ -94,6 +97,26 @@ func CheckWeather(bot *tgbotapi.BotAPI, opts *structs.Opts, userID int) bool {
 	}
 
 	return wasFoundSomething
+}
+
+func parseNumberFigures(day structs.Period) (int, int, int, int) {
+
+	var feelsLikeDayTemp, windNoon, precProbab int
+	weatherType := 4 // default value is "not used"
+
+	if intFrm, err := strconv.Atoi(day.Rep[0]["FDm"]); err == nil {
+		feelsLikeDayTemp = intFrm
+	}
+	if intGn, err := strconv.Atoi(day.Rep[0]["Gn"]); err == nil {
+		windNoon = intGn
+	}
+	if intPpd, err := strconv.Atoi(day.Rep[0]["PPd"]); err == nil {
+		precProbab = intPpd
+	}
+	if intWt, err := strconv.Atoi(day.Rep[0]["W"]); err == nil {
+		weatherType = intWt
+	}
+	return feelsLikeDayTemp, windNoon, precProbab, weatherType
 }
 
 func getBookmarksFromDatabase(userID int) ([]structs.UsersLocationBookmark, bool) {

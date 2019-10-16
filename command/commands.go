@@ -272,7 +272,7 @@ func renderWeatherForecastForOneLocation(bot *tgbotapi.BotAPI, db *storm.DB, cha
 	loc, _ := getDailyForecastFor(locations[0].LocationID, opts)
 
 	site := mapLocations[locations[0].LocationID]
-	str := fmt.Sprintf("%s %s, %s, %s UK", site.NationalPark, site.Name, site.AuthArea, strings.ToUpper(site.Region))
+	str := fmt.Sprintf("%s %s, %s, %s UK\n\n", site.NationalPark, site.Name, site.AuthArea, strings.ToUpper(site.Region))
 	str = str + drawFiveDaysTable(loc)
 	str = str + "\n For detailed daily forecast per 3 hour please use buttons below:"
 	resp, _ := sendMsg(bot, chatID, str)
@@ -295,7 +295,11 @@ func renderOneDayDetailedWeatherForecast(bot *tgbotapi.BotAPI, callbackQuery *tg
 	site := getMapOfLocations(locations, db)[locationID]
 
 	// Title
-	title := "*" + site.NationalPark + " " + site.Name + ", " + site.AuthArea + ", " + site.Region +
+	nationalPark := ""
+	if len(site.NationalPark) > 0 {
+		nationalPark = site.NationalPark + " "
+	}
+	title := "*" + nationalPark + site.Name + ", " + site.AuthArea + ", " + site.Region +
 		", UK*\n" + dateFormatted + "\n------\n\n"
 
 	// make request to MetOffice

@@ -177,7 +177,7 @@ func printDetailedPlotsForADay(data []map[string]string, keyFromMap, unit string
 
 	buffer.WriteString("```")
 	buffer.WriteString(unit)
-	buffer.WriteString("\n ")
+	buffer.WriteString("\n")
 
 	// kinda, dirty hack. If the width is set to custom value, asciigraph tries
 	// to normalize values so they should be rendered accordingly within ascii symbols.
