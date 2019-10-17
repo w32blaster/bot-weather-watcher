@@ -319,15 +319,14 @@ func renderOneDayDetailedWeatherForecast(bot *tgbotapi.BotAPI, callbackQuery *tg
 	for _, day := range root.SiteRep.Dv.Location.Periods {
 		if day.Value == selectedDate {
 
-			str := "Temperature: \n"
-			str = str + printDetailedPlotsForADay(day.Rep, "T", "˚C")
+			str := "Temperature: \n\n"
+			str = str + printDetailedPlotsForADay(day.Rep, "T", "˚C", false)
 
-			str = str + "Wind speed: \n"
-			str = str + printDetailedPlotsForADay(day.Rep, "S", "mph")
+			str = str + "Wind speed: \n\n"
+			str = str + printDetailedPlotsForADay(day.Rep, "S", "mph", false)
 
-			// too tall if rain is possible
-			//str = str + "Precipitation Probability: \n"
-			//str = str + printDetailedPlotsForADay(day.Rep, "Pp", "%ß")
+			str = str + "Precipitation Probability: \n\n"
+			str = str + printDetailedPlotsForADay(day.Rep, "Pp", "%", true)
 
 			// update existing message
 			if intMessageID, err := strconv.Atoi(messageIDtoUpdate); err == nil {

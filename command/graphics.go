@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/guptarohit/asciigraph"
 	"github.com/w32blaster/bot-weather-watcher/structs"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -172,11 +173,11 @@ func compensateSpaces(bfr *bytes.Buffer) {
 	}
 }
 
-func printDetailedPlotsForADay(data []map[string]string, keyFromMap, unit string) string {
+func printDetailedPlotsForADay(data []map[string]string, keyFromMap, unit string, isRound bool) string {
 	var buffer bytes.Buffer
 
-	buffer.WriteString("```")
-	buffer.WriteString(unit)
+	buffer.WriteString("```\n")
+	buffer.WriteString("  " + unit)
 	buffer.WriteString("\n")
 
 	// kinda, dirty hack. If the width is set to custom value, asciigraph tries
@@ -193,26 +194,48 @@ func printDetailedPlotsForADay(data []map[string]string, keyFromMap, unit string
 			temp3Hourly[(i*multiplier)+1] = 0.0
 			temp3Hourly[(i*multiplier)+2] = 0.0
 		} else {
-			fT := float64(intT)
+			var fT float64
+			if isRound {
+				fT = roundToTens(intT)
+			} else {
+				fT = float64(intT)
+			}
 			temp3Hourly[i*multiplier] = fT
 			temp3Hourly[(i*multiplier)+1] = fT
 			temp3Hourly[(i*multiplier)+2] = fT
 		}
 	}
 	graph := asciigraph.Plot(temp3Hourly)
+
 	// one more dirty hack, I know...
-	graph = strings.Replace(graph, ".00", "", -1)
+	replacement := ""
+	if isRound {
+		// oh.... So, even if we round to ten's, asciigraph renders vertical scale for each percent,
+		// so 100 percent plot looks huge. And no way to safely shrimp it. I found a hack, that
+		// we round and divide by 10, having max plot with 10 lines, and then simply draw artificial "0"
+		// simulating multiplying by 10. Sorry :(
+		replacement = "0"
+	}
+	graph = strings.Replace(graph, ".00", replacement, -1)
 
 	buffer.WriteString(graph)
 	if len(data) == 8 {
+		compensation := ""
+		if isRound {
+			compensation = " "
+		}
 		// draw the bottom line only if the day forecast is full:
 		// for the current day the first temperature may be started not with 12:00am, but
 		// with current day and the bottom line should show only the rest of hours for current day/
 		// TODO: improve that and show proper hours left for today
-		buffer.WriteString("\n    └┬──┬──┬──┬──┬──┬──┬──┬")
-		buffer.WriteString("\n     0am   6am   12am  6pm")
+		buffer.WriteString("\n" + compensation + "    └┬──┬──┬──┬──┬──┬──┬──┬")
+		buffer.WriteString("\n" + compensation + "     0am   6am   12am  6pm")
 	}
 	buffer.WriteString("\n```\n")
 
 	return buffer.String()
+}
+
+func roundToTens(raw int) float64 {
+	return math.Round(float64(raw) / 10)
 }
