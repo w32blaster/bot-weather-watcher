@@ -101,11 +101,12 @@ var states = map[int]state{
 			sm.UpdateFieldInBookmark("LowestTemp", intMinTemp)
 			sm.markNextStepState(StepSpecifyDays)
 
-			msg, _ := sendMsg(sm.bot, sm.chatID, "Desired temperature is saved. The last step, what days do you want to observe? Only weekends (makes sense if you "+
-				"on work during weekdays) or whole week (when you have a vacation or you have flexible time schedule)?")
+			msg, _ := sendMsg(sm.bot, sm.chatID, "Desired temperature is saved. The last step, what days do you want to observe? \n"+
+				" - only weekend (makes sense if you at work during weekdays) \n"+
+				" - all days (when you have a vacation or you have flexible time schedule)?")
 
 			rowButtons := []tgbotapi.InlineKeyboardButton{
-				tgbotapi.NewInlineKeyboardButtonData("Only Weekdays", ButtonChoiceAllDaysOrWeekends+Separator+strconv.Itoa(onlyWeekends)),
+				tgbotapi.NewInlineKeyboardButtonData("Only Weekend", ButtonChoiceAllDaysOrWeekends+Separator+strconv.Itoa(onlyWeekends)),
 				tgbotapi.NewInlineKeyboardButtonData("All days", ButtonChoiceAllDaysOrWeekends+Separator+strconv.Itoa(allDays)),
 			}
 

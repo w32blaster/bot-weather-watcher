@@ -130,7 +130,24 @@ func PrintSavedLocations(bot *tgbotapi.BotAPI, chatID int64, userID int) {
 	// load locations, build a map
 	mapLocs := getMapOfLocations(locations, db)
 
-	msg, _ := sendMsg(bot, chatID, "Here is your saved locations:")
+	var buffer bytes.Buffer
+	for _, loc := range locations {
+		buffer.WriteRune('•')
+		buffer.WriteRune(' ')
+		buffer.WriteString(mapLocs[loc.LocationID].Name)
+		buffer.WriteString(" (min t: ")
+		buffer.WriteString(strconv.Itoa(loc.LowestTemp))
+		buffer.WriteString("˚C, max wind: ")
+		buffer.WriteString(strconv.Itoa(loc.MaxWindSpeed))
+		buffer.WriteString("mph, check ")
+		if loc.CheckPeriod == allDays {
+			buffer.WriteString("all days)\n")
+		} else if loc.CheckPeriod == onlyWeekends {
+			buffer.WriteString("only weekends)\n")
+		}
+	}
+
+	msg, _ := sendMsg(bot, chatID, "Here are your saved locations: \n\n"+buffer.String()+"\n\n For details click buttons below")
 	renderLocationsButtons(bot, chatID, msg.MessageID, locations, mapLocs)
 }
 
