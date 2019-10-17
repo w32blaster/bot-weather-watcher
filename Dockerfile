@@ -28,7 +28,7 @@ EXPOSE 8444
 COPY --from=builder /app/bot /bot
 
 # the file weather.db should be moved to the /storage volume after container will be started
-COPY --from=builder /app/storage/weather.db /weather.db
+# COPY --from=builder /app/storage/weather.db /weather.db
 
 # copy root CA certificate to set up HTTPS connection with Telegram
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
