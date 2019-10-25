@@ -2,6 +2,8 @@ package command
 
 import (
 	"fmt"
+	"github.com/getsentry/sentry-go"
+	"github.com/pkg/errors"
 	"strconv"
 	"strings"
 
@@ -55,14 +57,14 @@ var states = map[int]state{
 			}
 
 			if err := sm.UpdateFieldInBookmark("LocationID", locaIDClean); err != nil {
-				log.WithError(err).Error("Can't update field for a given bookmark")
+				sentry.CaptureException(err)
 				sendMsg(sm.bot, sm.chatID, "Internal error: can't update location")
 				return
 			}
 
 			// if correct, then move to the next step
 			if err := sm.markNextStepState(StepEnterMaxWindSpeed); err != nil {
-				log.WithError(err).Error("Can't update next step in state machine")
+				sentry.CaptureException(err)
 				sendMsg(sm.bot, sm.chatID, "Internal error: can't update state")
 				return
 			}
@@ -123,13 +125,13 @@ var states = map[int]state{
 			intChoice, err := strconv.Atoi(rawMessage)
 			if err != nil {
 				sendMsg(sm.bot, sm.chatID, "Please click one of two buttons provided below")
-				log.WithError(err).Error("State machine: step for days specifying; we asked a user to choose ALL DAYS or ONLY WEEKENDS and waited for a response, but can't parse response")
+				sentry.CaptureException(errors.Wrap(err, "State machine: step for days specifying; we asked a user to choose ALL DAYS or ONLY WEEKENDS and waited for a response, but can't parse response"))
 				return
 			}
 
 			if intChoice != allDays && intChoice != onlyWeekends {
 				sendMsg(sm.bot, sm.chatID, "Please click one of two buttons provided below")
-				log.WithField("response", intChoice).Error("State machine: step for days specifying; we waited for a response only 1 or 0")
+				sentry.CaptureException(errors.Wrap(err, "State machine: step for days specifying; we waited for a response only 1 or 0"))
 				return
 			}
 
@@ -201,9 +203,7 @@ func (sm *StateMachine) loadState(userID int) (int, error) {
 			CurrentState: StepEnterLocation,
 		}
 		if err := sm.db.Save(&state); err != nil {
-			log.WithError(err).
-				WithField("user-id", userID).
-				Error("attempt to create a new state and persist it to the database")
+			sentry.CaptureException(errors.Wrap(err, "attempt to create a new state and persist it to the database"))
 			return -1, err
 		}
 	}

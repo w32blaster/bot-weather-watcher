@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/getsentry/sentry-go"
 	"net/http"
 	"strconv"
 	"time"
@@ -10,7 +11,6 @@ import (
 	"github.com/caarlos0/env"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/jasonlvhit/gocron"
-	log "github.com/sirupsen/logrus"
 	"github.com/w32blaster/bot-weather-watcher/command"
 )
 
@@ -29,10 +29,10 @@ func main() {
 
 	bot.Debug = opts.IsDebug
 
-	if !opts.IsDebug {
-		// Log as JSON instead of the default ASCII formatter.
-		log.SetFormatter(&log.JSONFormatter{})
-	}
+	sentry.Init(sentry.ClientOptions{
+		Dsn:   "https://8a214dcfddd344a48e3bdfbc99c956a9@sentry.io/1782730",
+		Debug: opts.IsDebug,
+	})
 
 	// run scheduler
 	gocron.Every(1).Day().At("01:10").Loc(time.UTC).Do(func() {
@@ -40,7 +40,7 @@ func main() {
 	})
 	gocron.Start()
 
-	log.WithField("username", bot.Self.UserName).Info("Authorized on account")
+	sentry.CaptureMessage("Authorized on account " + bot.Self.UserName)
 	updates := bot.ListenForWebhook("/" + bot.Token)
 	go http.ListenAndServe(":"+strconv.Itoa(opts.Port), nil)
 
@@ -48,14 +48,13 @@ func main() {
 
 		if update.Message != nil {
 
-			command.SetLog(log.WithFields(log.Fields{
-				"app-name":  "Bot Weather Watcher",
-				"user-id":   update.Message.From.ID,
-				"user-name": update.Message.From.UserName,
-				"chat-id":   update.Message.Chat.ID,
-				"action":    "message",
-				"raw-text":  update.Message.Text,
-			}))
+			sentry.ConfigureScope(func(scope *sentry.Scope) {
+				scope.SetUser(sentry.User{
+					ID:       strconv.Itoa(update.Message.From.ID),
+					Username: update.Message.From.UserName})
+				scope.SetTag("action", "message")
+				scope.SetTag("raw-text", update.Message.Text)
+			})
 
 			if update.Message.IsCommand() {
 
@@ -70,26 +69,26 @@ func main() {
 
 		} else if update.CallbackQuery != nil {
 
-			command.SetLog(log.WithFields(log.Fields{
-				"app-name":  "Bot Weather Watcher",
-				"user-id":   update.CallbackQuery.From.ID,
-				"user-name": update.CallbackQuery.From.UserName,
-				"action":    "button-clicked",
-				"raw-text":  update.CallbackQuery.Data,
-			}))
+			sentry.ConfigureScope(func(scope *sentry.Scope) {
+				scope.SetUser(sentry.User{
+					ID:       strconv.Itoa(update.Message.From.ID),
+					Username: update.Message.From.UserName})
+				scope.SetTag("action", "button-clicked")
+				scope.SetTag("raw-text", update.CallbackQuery.Data)
+			})
 
 			// this is the callback after a button click
 			command.ProcessButtonCallback(bot, update.CallbackQuery, &opts)
 
 		} else if update.InlineQuery != nil {
 
-			command.SetLog(log.WithFields(log.Fields{
-				"app-name":  "Bot Weather Watcher",
-				"user-id":   update.InlineQuery.From.ID,
-				"user-name": update.InlineQuery.From.UserName,
-				"action":    "inline-query",
-				"raw-text":  update.InlineQuery.Query,
-			}))
+			sentry.ConfigureScope(func(scope *sentry.Scope) {
+				scope.SetUser(sentry.User{
+					ID:       strconv.Itoa(update.Message.From.ID),
+					Username: update.Message.From.UserName})
+				scope.SetTag("action", "inline-query")
+				scope.SetTag("raw-text", update.InlineQuery.Query)
+			})
 
 			// this is inline query (it's like a suggestion while typing)
 			command.ProcessInlineQuery(bot, update.InlineQuery)

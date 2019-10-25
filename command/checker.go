@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/asdine/storm/q"
+	"github.com/getsentry/sentry-go"
 	"strconv"
 	"strings"
 	"time"
@@ -13,7 +14,7 @@ import (
 	"github.com/asdine/storm"
 	"github.com/asdine/storm/codec/msgpack"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
-	"github.com/sirupsen/logrus"
+	"github.com/pkg/errors"
 )
 
 const precipProbRain = 40 // min precipitation probability when we assume that will be rainy day
@@ -29,13 +30,16 @@ func CheckWeather(bot *tgbotapi.BotAPI, opts *structs.Opts, userID int) bool {
 	wasFoundSomething := false
 	for _, loc := range locations {
 
+		sentry.ConfigureScope(func(scope *sentry.Scope) {
+			scope.SetUser(sentry.User{
+				ID: strconv.Itoa(loc.UserID)})
+			scope.SetTag("action", "check-weather-nightly")
+			scope.SetExtra("location", loc.LocationID)
+		})
+
 		forecast, err := getDailyForecastFor(loc.LocationID, opts)
 		if err != nil {
-			log.WithError(err).WithFields(logrus.Fields{
-				"location-id": loc.LocationID,
-				"id":          loc.ID,
-			}).Error("Can't get daily forecast from metoffice")
-
+			sentry.CaptureException(err)
 			continue
 		}
 
@@ -45,7 +49,7 @@ func CheckWeather(bot *tgbotapi.BotAPI, opts *structs.Opts, userID int) bool {
 			// parse date
 			t, err := time.Parse(layoutMetofficeDate, day.Value)
 			if err != nil {
-				log.WithError(err).Error("Can't parse date from the bookmark, this day is ignored from checking")
+				sentry.CaptureException(errors.Wrap(err, "Can't parse date from the bookmark, this day is ignored from checking"))
 				continue
 			}
 
@@ -60,17 +64,7 @@ func CheckWeather(bot *tgbotapi.BotAPI, opts *structs.Opts, userID int) bool {
 				windNoon < loc.MaxWindSpeed &&
 				precProbab < precipProbRain
 
-			log.WithFields(logrus.Fields{
-				"date":                   day.Value,
-				"bookmark-owner":         loc.UserID,
-				"bookmark-location":      forecast.SiteRep.Dv.Location.Name,
-				"temp-feels-like":        feelsLikeDayTemp,
-				"temp-min-desired":       loc.LowestTemp,
-				"wind-speed":             windNoon,
-				"wind-speed-max-desired": loc.MaxWindSpeed,
-				"precip-prob":            precProbab,
-				"is-suitable":            isSuitableWeather,
-			}).Info("Checker was called the forecast")
+			logEventToSentry(loc, day, forecast, feelsLikeDayTemp, windNoon, precProbab, isSuitableWeather)
 
 			if isSuitableWeather {
 				buffer.WriteString(
@@ -99,6 +93,31 @@ func CheckWeather(bot *tgbotapi.BotAPI, opts *structs.Opts, userID int) bool {
 	return wasFoundSomething
 }
 
+func logEventToSentry(loc structs.UsersLocationBookmark, day structs.Period, forecast *structs.RootSiteRep, feelsLikeDayTemp, windNoon, precProbab int, isSuitableWeather bool) {
+	event := sentry.NewEvent()
+	event.Message = "Checker was called the forecast"
+	event.Timestamp = time.Now().UTC().Unix()
+	event.Tags = map[string]string{
+		"action": "check-weather-nightly",
+	}
+	event.User = sentry.User{
+		ID: strconv.Itoa(loc.UserID),
+	}
+	event.Level = sentry.LevelInfo
+	event.Extra = map[string]interface{}{
+		"date":                   day.Value,
+		"bookmark-owner":         loc.UserID,
+		"bookmark-location":      forecast.SiteRep.Dv.Location.Name,
+		"temp-feels-like":        feelsLikeDayTemp,
+		"temp-min-desired":       loc.LowestTemp,
+		"wind-speed":             windNoon,
+		"wind-speed-max-desired": loc.MaxWindSpeed,
+		"precip-prob":            precProbab,
+		"is-suitable":            isSuitableWeather,
+	}
+	sentry.CaptureEvent(event)
+}
+
 func parseNumberFigures(day structs.Period) (int, int, int, int) {
 
 	var feelsLikeDayTemp, windNoon, precProbab int
@@ -123,7 +142,7 @@ func getBookmarksFromDatabase(userID int) ([]structs.UsersLocationBookmark, bool
 
 	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
 	if err != nil {
-		log.WithError(err).Warn("Can't open database")
+		sentry.CaptureException(err)
 		return nil, false
 	}
 	defer db.Close()
@@ -143,7 +162,7 @@ func getBookmarksFromDatabase(userID int) ([]structs.UsersLocationBookmark, bool
 	}
 
 	if err != nil {
-		log.WithError(err).Error("Can't read bookmarks form DB")
+		sentry.CaptureException(err)
 		return nil, false
 	}
 

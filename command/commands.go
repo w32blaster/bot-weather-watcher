@@ -13,11 +13,11 @@ import (
 	"github.com/asdine/storm"
 	"github.com/asdine/storm/codec/msgpack"
 	"github.com/asdine/storm/q"
+	"github.com/getsentry/sentry-go"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
-	"github.com/sirupsen/logrus"
+	"github.com/labstack/gommon/log"
+	"github.com/pkg/errors"
 )
-
-var log logrus.Entry
 
 const (
 	DbPath                        = "storage/weather.db"
@@ -28,10 +28,6 @@ const (
 	ButtonLocationPrefix          = "L"  // for button "start searching for location
 	ButtonDeleteMsgPrefix         = "dM" // for button "delete message"
 )
-
-func SetLog(entry *logrus.Entry) {
-	log = *entry
-}
 
 // ProcessCommands acts when user sent to a bot some command, for example "/command arg1 arg2"
 func ProcessCommands(bot *tgbotapi.BotAPI, message *tgbotapi.Message, opts *structs.Opts) {
@@ -95,17 +91,17 @@ func CheckForecastForBookmarks(bot *tgbotapi.BotAPI, message *tgbotapi.Message, 
 func DeleteLocations(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
 	if err != nil {
-		log.WithError(err).Warn("Can't open database")
+		sentry.CaptureException(err)
 		sendMsg(bot, message.Chat.ID, "Sorry, internal error occurred, can't open a database. Please try again later.")
 		return
 	}
 	defer db.Close()
 
 	if err := DeleteAllForThisUser(db, message.From.ID); err != nil {
-		log.WithError(err).WithField("user-id", message.From.ID).Error("Can't delete all user bookmarks (saved locations)")
+		sentry.CaptureException(err)
 	}
 
-	log.WithField("user-id", message.From.ID).Info("User bookmarks were deleted")
+	sentry.CaptureMessage(fmt.Sprintf("User %s (id=%d) bookmarks were deleted", message.From.UserName, message.From.ID))
 	sendMsg(bot, message.Chat.ID, "Deleted")
 }
 
@@ -113,7 +109,7 @@ func PrintSavedLocations(bot *tgbotapi.BotAPI, chatID int64, userID int) {
 
 	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
 	if err != nil {
-		log.WithError(err).Warn("Can't open database")
+		sentry.CaptureException(err)
 		sendMsg(bot, chatID, "Sorry, internal error occurred, can't open a database. Please try again later.")
 		return
 	}
@@ -170,7 +166,7 @@ func getMapOfLocations(locations []structs.UsersLocationBookmark, db *storm.DB) 
 func StartProcessAddingNewLocation(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
 	if err != nil {
-		log.WithError(err).Warn("Can't open database")
+		sentry.CaptureException(err)
 		sendMsg(bot, message.Chat.ID, "Sorry, internal error occurred, can't open a database. Please try again later.")
 		return
 	}
@@ -186,13 +182,13 @@ func StartProcessAddingNewLocation(bot *tgbotapi.BotAPI, message *tgbotapi.Messa
 	// and now start a new state machine
 	sm, err := LoadStateMachineFor(bot, message.Chat.ID, message.From.ID, db)
 	if err != nil {
-		log.WithError(err).Warn("Can't initiate a state machine")
+		sentry.CaptureException(err)
 		sendMsg(bot, message.Chat.ID, "Sorry, internal error occurred, please trt again later")
 		return
 	}
 
 	if err := sm.CreateNewBookmark(message.Chat.ID); err != nil {
-		log.WithError(err).Warn("Can't create a new bookmark")
+		sentry.CaptureException(err)
 		sendMsg(bot, message.Chat.ID, "Sorry, internal error occurred, please trt again later")
 		return
 	}
@@ -211,14 +207,14 @@ func ProcessPlainText(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 
 	if err != nil {
 		sendMsg(bot, message.Chat.ID, "Ouch, this is internal error, sorry")
-		log.WithError(err).Warn("Can't open database")
+		sentry.CaptureException(err)
 		return
 	}
 
 	stateMachine, err := LoadStateMachineFor(bot, message.Chat.ID, message.From.ID, db)
 	if err != nil {
 		sendMsg(bot, message.Chat.ID, "Ouch, this is internal error, sorry")
-		log.WithError(err).Warn("Can't create state machine")
+		sentry.CaptureException(err)
 		return
 	}
 
@@ -234,7 +230,7 @@ func ProcessButtonCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 
 	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
 	if err != nil {
-		log.WithError(err).Warn("Can't open database")
+		sentry.CaptureException(err)
 		sendMsg(bot, callbackQuery.Message.Chat.ID, "Whoops... error :(")
 		return
 	}
@@ -261,7 +257,7 @@ func ProcessButtonCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 		stateMachine, err := LoadStateMachineFor(bot, callbackQuery.Message.Chat.ID, callbackQuery.From.ID, db)
 		if err != nil {
 			sendMsg(bot, callbackQuery.Message.Chat.ID, "Ouch, this is internal error, sorry")
-			log.WithError(err).Warn("Can't create state machine")
+			sentry.CaptureException(err)
 			return
 		}
 
@@ -274,8 +270,7 @@ func deleteMessage(bot *tgbotapi.BotAPI, chatID int64, messageID string) {
 		msg := tgbotapi.NewDeleteMessage(chatID, intMessageID)
 		bot.Send(msg)
 	} else {
-		log.WithError(err).WithField("message-id", messageID).
-			Warn("Can't delete message, because messageID is invalid")
+		sentry.CaptureException(err)
 	}
 }
 
@@ -322,12 +317,7 @@ func renderOneDayDetailedWeatherForecast(bot *tgbotapi.BotAPI, callbackQuery *tg
 	// make request to MetOffice
 	root, err := get3HoursForecastFor(locationID, opts)
 	if err != nil {
-
-		log.WithError(err).WithFields(logrus.Fields{
-			"location-id":   locationID,
-			"location-name": site.Name,
-		}).Warn("Can't get 3 hours forecast from metoffice")
-
+		sentry.CaptureException(err)
 		sendMsg(bot, callbackQuery.Message.Chat.ID, "Error retrieving data from MetOffice. Try again later")
 		return
 	}
@@ -354,7 +344,7 @@ func renderOneDayDetailedWeatherForecast(bot *tgbotapi.BotAPI, callbackQuery *tg
 
 				resp, err := bot.Send(msg)
 				if err != nil {
-					log.Println("bot.Send:", err, resp)
+					sentry.CaptureException(err)
 					break
 				}
 
@@ -370,7 +360,7 @@ func renderOneDayDetailedWeatherForecast(bot *tgbotapi.BotAPI, callbackQuery *tg
 func ProcessInlineQuery(bot *tgbotapi.BotAPI, inlineQuery *tgbotapi.InlineQuery) {
 	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
 	if err != nil {
-		log.WithError(err).Warn("Can't open database")
+		sentry.CaptureException(err)
 		return
 	}
 	defer db.Close()
@@ -411,14 +401,14 @@ func ProcessInlineQuery(bot *tgbotapi.BotAPI, inlineQuery *tgbotapi.InlineQuery)
 
 		bytes, err2 := resp.Result.MarshalJSON()
 		if err2 != nil {
-			log.WithError(err2).Warn("I tried to parse JSON that was returned from bot, but couldn't. Empty array is used")
+			sentry.CaptureException(errors.Wrap(err2, "I tried to parse JSON that was returned from bot, but couldn't. Empty array is used"))
 			bytes = []byte{}
 		}
 
-		log.WithError(err).WithFields(logrus.Fields{
-			"description": resp.Description,
-			"raw-message": string(bytes),
-		}).Error("bot.answerInlineQuery")
+		if len(bytes) > 0 {
+			err = errors.Wrap(err, "We tried to send inline query to telegram, but error occurred: "+string(bytes))
+		}
+		sentry.CaptureException(err)
 	}
 }
 
@@ -449,8 +439,7 @@ func sendMsg(bot *tgbotapi.BotAPI, chatID int64, textMarkdown string) (tgbotapi.
 	// send the message
 	resp, err := bot.Send(msg)
 	if err != nil {
-		log.WithError(err).
-			Error("error when we tried to send a message using bot.Send:")
+		sentry.CaptureException(err)
 		return resp, err
 	}
 

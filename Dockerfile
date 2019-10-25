@@ -9,6 +9,7 @@ COPY . .
 # compile app
 RUN CGO_ENABLED=0 GOOS=linux go build \
     -a -installsuffix cgo \
+    -ldflags "-s -w" \
     -o /app/bot \
     cmd/bot/main.go
 
@@ -34,6 +35,6 @@ COPY --from=builder /app/bot /bot
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
 # copy timezone databases to be able to find London location zone
-COPY --from=builder /usr/local/go/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
+# COPY --from=builder /usr/local/go/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
 
 CMD ["/bot"]
