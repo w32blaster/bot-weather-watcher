@@ -292,9 +292,15 @@ func deleteMessage(bot *tgbotapi.BotAPI, chatID int64, messageID string) {
 
 func deleteOneBookmark(bot *tgbotapi.BotAPI, db *storm.DB, chatID int64, bookmarkID string) {
 
+	intBookmarkID, err := strconv.Atoi(bookmarkID)
+	if err != nil {
+		sentry.CaptureException(errors.Wrap(err, "Can't parse bookmarkID, expected valid number, but got: "+bookmarkID))
+		return
+	}
+
 	var bookmark structs.UsersLocationBookmark
-	if err := db.One("ID", bookmarkID, &bookmark); err != nil {
-		sentry.CaptureException(err)
+	if err := db.One("ID", intBookmarkID, &bookmark); err != nil {
+		sentry.CaptureException(errors.Wrap(err, "Can't find a bookmark"))
 		sendMsg(bot, chatID, "Can't find a bookmark")
 		return
 	}
@@ -303,7 +309,7 @@ func deleteOneBookmark(bot *tgbotapi.BotAPI, db *storm.DB, chatID int64, bookmar
 		sentry.CaptureException(err)
 	}
 
-	sendMsg(bot, chatID, "Deleted. You can see all saved bookmarks using the command /locations")
+	sendMsg(bot, chatID, "✅ Deleted. You can see all saved bookmarks using the command \n /locations")
 }
 
 func renderWeatherForecastForOneLocation(bot *tgbotapi.BotAPI, db *storm.DB, chatID int64, userID int, opts *structs.Opts, locationID string) {
