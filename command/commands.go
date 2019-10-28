@@ -227,6 +227,14 @@ func ProcessPlainText(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 
 func ProcessButtonCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, opts *structs.Opts) {
 
+	sentry.AddBreadcrumb(&sentry.Breadcrumb{
+		Message: "The button was clicked",
+		Data: map[string]interface{}{
+			"raw-text": callbackQuery.Data,
+		},
+		Level: sentry.LevelInfo,
+	})
+
 	// notify the telegram that we processed the button, it will turn "loading indicator" off
 	defer bot.AnswerCallbackQuery(tgbotapi.CallbackConfig{
 		CallbackQueryID: callbackQuery.ID,
@@ -258,7 +266,7 @@ func ProcessButtonCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 	} else if parts[0] == ButtonDeleteBookmark {
 
 		// delete one bookmark
-		deleteOneBookmark(bot, callbackQuery.Message.Chat.ID, parts[1])
+		deleteOneBookmark(bot, db, callbackQuery.Message.Chat.ID, parts[1])
 	} else if parts[0] == ButtonChoiceAllDaysOrWeekends {
 
 		// this is part of new location adding steps, where user should select "all days" or "only weekend"; so use state machine
@@ -282,17 +290,10 @@ func deleteMessage(bot *tgbotapi.BotAPI, chatID int64, messageID string) {
 	}
 }
 
-func deleteOneBookmark(bot *tgbotapi.BotAPI, chatID int64, bookmarkID string) {
-	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
-	if err != nil {
-		sentry.CaptureException(err)
-		sendMsg(bot, chatID, "Whoops... error :(")
-		return
-	}
-	defer db.Close()
+func deleteOneBookmark(bot *tgbotapi.BotAPI, db *storm.DB, chatID int64, bookmarkID string) {
 
 	var bookmark structs.UsersLocationBookmark
-	if err = db.One("id", bookmarkID, &bookmark); err != nil {
+	if err := db.One("id", bookmarkID, &bookmark); err != nil {
 		sentry.CaptureException(err)
 		sendMsg(bot, chatID, "Can't find a bookmark")
 		return
