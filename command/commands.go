@@ -371,7 +371,7 @@ func renderOneDayDetailedWeatherForecast(bot *tgbotapi.BotAPI, callbackQuery *tg
 			str = str + printDetailedPlotsForADay(day.Rep, "S", "mph", false)
 
 			str = str + "Precipitation Probability: \n\n"
-			str = str + printDetailedPlotsForADay(day.Rep, "Pp", "%", true)
+			str = str + printDetailedPlotsForADay(day.Rep, "Pp", " %", true)
 
 			// update existing message
 			if intMessageID, err := strconv.Atoi(messageIDtoUpdate); err == nil {

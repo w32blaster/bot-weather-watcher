@@ -188,11 +188,16 @@ func printDetailedPlotsForADay(data []map[string]string, keyFromMap, unit string
 	multiplier := 3
 
 	temp3Hourly := make([]float64, len(data)*multiplier)
+
+	// remember if a vertical axe has a long value (that is more than 2 symbols),
+	// this affects to the bottom line compensation
+	hasLongValue := false
+
 	for i, mapHour := range data {
 		if intT, err := strconv.Atoi(mapHour[keyFromMap]); err != nil {
 			temp3Hourly[i*multiplier] = 0.0
 			temp3Hourly[(i*multiplier)+1] = 0.0
-			temp3Hourly[(i*multiplier)+2] = 0.0
+			temp3Hourly[(i*multiplier)+2] = 0.1
 		} else {
 			var fT float64
 			if isRound {
@@ -200,9 +205,12 @@ func printDetailedPlotsForADay(data []map[string]string, keyFromMap, unit string
 			} else {
 				fT = float64(intT)
 			}
+			if fT >= 100 {
+				hasLongValue = true
+			}
 			temp3Hourly[i*multiplier] = fT
 			temp3Hourly[(i*multiplier)+1] = fT
-			temp3Hourly[(i*multiplier)+2] = fT
+			temp3Hourly[(i*multiplier)+2] = fT - 1 // -1 because if all the values are the same, there is panic because of devision by 0 inside asciigraph
 		}
 	}
 	graph := asciigraph.Plot(temp3Hourly)
@@ -221,7 +229,7 @@ func printDetailedPlotsForADay(data []map[string]string, keyFromMap, unit string
 	buffer.WriteString(graph)
 	if len(data) == 8 {
 		compensation := ""
-		if isRound {
+		if hasLongValue {
 			compensation = " "
 		}
 		// draw the bottom line only if the day forecast is full:
