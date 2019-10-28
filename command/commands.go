@@ -26,6 +26,7 @@ const (
 	ButtonDaysPrefix              = "D"  // for buttons with days for detailed forecast
 	ButtonLocationPrefix          = "L"  // for button "start searching for location
 	ButtonDeleteMsgPrefix         = "dM" // for button "delete message"
+	ButtonDeleteBookmark          = "dB" // for button "delete bookmark"
 )
 
 // ProcessCommands acts when user sent to a bot some command, for example "/command arg1 arg2"
@@ -250,6 +251,10 @@ func ProcessButtonCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 
 		// delete message
 		deleteMessage(bot, callbackQuery.Message.Chat.ID, parts[1])
+	} else if parts[0] == ButtonDeleteBookmark {
+
+		// delete one bookmark
+		deleteOneBookmark(bot, callbackQuery.Message.Chat.ID, parts[1])
 	} else if parts[0] == ButtonChoiceAllDaysOrWeekends {
 
 		// this is part of new location adding steps, where user should select "all days" or "only weekend"; so use state machine
@@ -269,6 +274,27 @@ func deleteMessage(bot *tgbotapi.BotAPI, chatID int64, messageID string) {
 		msg := tgbotapi.NewDeleteMessage(chatID, intMessageID)
 		bot.Send(msg)
 	} else {
+		sentry.CaptureException(err)
+	}
+}
+
+func deleteOneBookmark(bot *tgbotapi.BotAPI, chatID int64, bookmarkID string) {
+	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
+	if err != nil {
+		sentry.CaptureException(err)
+		sendMsg(bot, chatID, "Whoops... error :(")
+		return
+	}
+	defer db.Close()
+
+	var bookmark structs.UsersLocationBookmark
+	if err = db.One("id", bookmarkID, &bookmark); err != nil {
+		sentry.CaptureException(err)
+		sendMsg(bot, chatID, "Can't find a bookmark")
+		return
+	}
+
+	if err := db.DeleteStruct(&bookmark); err != nil {
 		sentry.CaptureException(err)
 	}
 }

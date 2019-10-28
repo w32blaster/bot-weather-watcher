@@ -21,10 +21,20 @@ const precipProbRain = 40 // min precipitation probability when we assume that w
 
 func CheckWeather(bot *tgbotapi.BotAPI, opts *structs.Opts, userID int) bool {
 
-	locations, ok := getBookmarksFromDatabase(userID)
+	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
+	if err != nil {
+		sentry.CaptureException(err)
+		return false
+	}
+	defer db.Close()
+
+	locations, ok := getBookmarksFromDatabase(db, userID)
 	if !ok {
 		return false
 	}
+
+	// load locations, build a map
+	mapLocs := getMapOfLocations(locations, db)
 
 	var buffer bytes.Buffer
 	wasFoundSomething := false
@@ -34,7 +44,9 @@ func CheckWeather(bot *tgbotapi.BotAPI, opts *structs.Opts, userID int) bool {
 			scope.SetUser(sentry.User{
 				ID: strconv.Itoa(loc.UserID)})
 			scope.SetTag("action", "check-weather-nightly")
-			scope.SetExtra("location", loc.LocationID)
+			scope.SetExtra("location-id", loc.LocationID)
+			scope.SetExtra("location-name", mapLocs[loc.LocationID].Name)
+			scope.SetExtra("location-auth-area", mapLocs[loc.LocationID].AuthArea)
 		})
 
 		forecast, err := getDailyForecastFor(loc.LocationID, opts)
@@ -83,7 +95,8 @@ func CheckWeather(bot *tgbotapi.BotAPI, opts *structs.Opts, userID int) bool {
 		}
 
 		if buffer.Len() > 0 {
-			sendMsg(bot, loc.ChatID, "Hey, good weather will be at: \n\n"+buffer.String())
+			msg, _ := sendMsg(bot, loc.ChatID, "Hey, good weather will be at: \n\n"+buffer.String())
+			renderButtonDeleteBookmark(bot, loc.ChatID, msg.MessageID, loc.ID, mapLocs[loc.LocationID].Name)
 			wasFoundSomething = true
 		}
 
@@ -138,16 +151,10 @@ func parseNumberFigures(day structs.Period) (int, int, int, int) {
 	return feelsLikeDayTemp, windNoon, precProbab, weatherType
 }
 
-func getBookmarksFromDatabase(userID int) ([]structs.UsersLocationBookmark, bool) {
-
-	db, err := storm.Open(DbPath, storm.Codec(msgpack.Codec))
-	if err != nil {
-		sentry.CaptureException(err)
-		return nil, false
-	}
-	defer db.Close()
+func getBookmarksFromDatabase(db *storm.DB, userID int) ([]structs.UsersLocationBookmark, bool) {
 
 	var locations []structs.UsersLocationBookmark
+	var err error
 	if userID == -1 {
 
 		// find all ready bookmarks
@@ -174,4 +181,16 @@ func getBookmarksFromDatabase(userID int) ([]structs.UsersLocationBookmark, bool
 // Please refer to unit tests
 func shouldBotherForWeekdays(dayChoice int, weekday time.Weekday) bool {
 	return !(dayChoice == onlyWeekends && weekday != time.Friday && weekday != time.Saturday && weekday != time.Sunday)
+}
+
+// renders the button row with days for detailed forecast
+func renderButtonDeleteBookmark(bot *tgbotapi.BotAPI, chatID int64, messageID int, bookmarkID int, locationName string) {
+
+	rowCloseButton := []tgbotapi.InlineKeyboardButton{
+		tgbotapi.NewInlineKeyboardButtonData("❌ Stop observing "+locationName, ButtonDeleteBookmark+Separator+strconv.Itoa(bookmarkID)),
+	}
+
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(rowCloseButton)
+	keyboardMsg := tgbotapi.NewEditMessageReplyMarkup(chatID, messageID, keyboard)
+	bot.Send(keyboardMsg)
 }
