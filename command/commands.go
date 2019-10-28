@@ -83,6 +83,10 @@ Please start with /start command.`
 
 func CheckForecastForBookmarks(bot *tgbotapi.BotAPI, message *tgbotapi.Message, opts *structs.Opts) {
 	sentry.CaptureMessage("The check command was called")
+
+	msg, _ := sendMsg(bot, message.Chat.ID, "Checking the weather forecast for all your saved bookmarks...")
+	defer tgbotapi.NewDeleteMessage(message.Chat.ID, msg.MessageID)
+
 	if wasFound := CheckWeather(bot, opts, message.From.ID); !wasFound {
 		sendMsg(bot, message.Chat.ID, "Sorry, only bad weather in the nearest time ⛈")
 	}
