@@ -7,4 +7,5 @@ type Opts struct {
 	IsDebug        bool   `env:"IS_DEBUG"`
 	BotToken       string `env:"BOT_TOKEN,required"`
 	MetofficeAppID string `env:"METOFFICE_APP_ID"`
+	SentryDSN      string `env:"SENTRY_DSN"`
 }

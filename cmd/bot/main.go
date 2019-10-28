@@ -30,7 +30,7 @@ func main() {
 	bot.Debug = opts.IsDebug
 
 	sentry.Init(sentry.ClientOptions{
-		Dsn:   "https://8a214dcfddd344a48e3bdfbc99c956a9@sentry.io/1782730",
+		Dsn:   opts.SentryDSN,
 		Debug: opts.IsDebug,
 	})
 
