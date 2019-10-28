@@ -71,8 +71,8 @@ func main() {
 
 			sentry.ConfigureScope(func(scope *sentry.Scope) {
 				scope.SetUser(sentry.User{
-					ID:       strconv.Itoa(update.Message.From.ID),
-					Username: update.Message.From.UserName})
+					ID:       strconv.Itoa(update.CallbackQuery.From.ID),
+					Username: update.CallbackQuery.From.UserName})
 				scope.SetTag("action", "button-clicked")
 				scope.SetTag("raw-text", update.CallbackQuery.Data)
 			})
@@ -84,8 +84,8 @@ func main() {
 
 			sentry.ConfigureScope(func(scope *sentry.Scope) {
 				scope.SetUser(sentry.User{
-					ID:       strconv.Itoa(update.Message.From.ID),
-					Username: update.Message.From.UserName})
+					ID:       strconv.Itoa(update.InlineQuery.From.ID),
+					Username: update.InlineQuery.From.UserName})
 				scope.SetTag("action", "inline-query")
 				scope.SetTag("raw-text", update.InlineQuery.Query)
 			})
