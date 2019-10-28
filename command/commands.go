@@ -15,7 +15,6 @@ import (
 	"github.com/asdine/storm/q"
 	"github.com/getsentry/sentry-go"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
-	"github.com/labstack/gommon/log"
 	"github.com/pkg/errors"
 )
 
@@ -46,7 +45,7 @@ when a weather forecast matches your expectations. Have fun.
 This bot works in UK only and uses data from metoffice.gov.uk
 
 Please start with /start command.`
-		log.Info("About command was sent")
+		sentry.CaptureMessage("About command was sent")
 		sendMsg(bot, chatID, about)
 
 	case "help":
@@ -82,7 +81,7 @@ Please start with /start command.`
 }
 
 func CheckForecastForBookmarks(bot *tgbotapi.BotAPI, message *tgbotapi.Message, opts *structs.Opts) {
-	log.Info("The check command was called")
+	sentry.CaptureMessage("The check command was called")
 	if wasFound := CheckWeather(bot, opts, message.From.ID); !wasFound {
 		sendMsg(bot, message.Chat.ID, "Sorry, only bad weather in the nearest time ⛈")
 	}
