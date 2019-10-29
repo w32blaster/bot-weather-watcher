@@ -46,15 +46,11 @@ func main() {
 
 	for update := range updates {
 
+		sentry.CurrentHub().PushScope()
+
 		if update.Message != nil {
 
-			sentry.ConfigureScope(func(scope *sentry.Scope) {
-				scope.SetUser(sentry.User{
-					ID:       strconv.Itoa(update.Message.From.ID),
-					Username: update.Message.From.UserName})
-				scope.SetTag("action", "message")
-				scope.SetTag("raw-text", update.Message.Text)
-			})
+			configureScope(update.Message.From, "message", update.Message.Text)
 
 			if update.Message.IsCommand() {
 
@@ -69,31 +65,29 @@ func main() {
 
 		} else if update.CallbackQuery != nil {
 
-			sentry.ConfigureScope(func(scope *sentry.Scope) {
-				scope.SetUser(sentry.User{
-					ID:       strconv.Itoa(update.CallbackQuery.From.ID),
-					Username: update.CallbackQuery.From.UserName})
-				scope.SetTag("action", "button-clicked")
-				scope.SetTag("raw-text", update.CallbackQuery.Data)
-			})
+			configureScope(update.Message.From, "button-clicked", update.CallbackQuery.Data)
 
 			// this is the callback after a button click
 			command.ProcessButtonCallback(bot, update.CallbackQuery, &opts)
 
 		} else if update.InlineQuery != nil {
 
-			sentry.ConfigureScope(func(scope *sentry.Scope) {
-				scope.SetUser(sentry.User{
-					ID:       strconv.Itoa(update.InlineQuery.From.ID),
-					Username: update.InlineQuery.From.UserName})
-				scope.SetTag("action", "inline-query")
-				scope.SetTag("raw-text", update.InlineQuery.Query)
-			})
+			configureScope(update.Message.From, "inline-query", update.InlineQuery.Query)
 
 			// this is inline query (it's like a suggestion while typing)
 			command.ProcessInlineQuery(bot, update.InlineQuery)
 		}
 
+		sentry.CurrentHub().PopScope()
 	}
+}
 
+func configureScope(user *tgbotapi.User, action, rawText string) {
+	sentry.ConfigureScope(func(scope *sentry.Scope) {
+		scope.SetUser(sentry.User{
+			ID:       strconv.Itoa(user.ID),
+			Username: user.UserName})
+		scope.SetTag("action", action)
+		scope.SetExtra("raw-text", rawText)
+	})
 }
