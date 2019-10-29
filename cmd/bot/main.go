@@ -65,14 +65,14 @@ func main() {
 
 		} else if update.CallbackQuery != nil {
 
-			configureScope(update.Message.From, "button-clicked", update.CallbackQuery.Data)
+			configureScope(update.CallbackQuery.From, "button-clicked", update.CallbackQuery.Data)
 
 			// this is the callback after a button click
 			command.ProcessButtonCallback(bot, update.CallbackQuery, &opts)
 
 		} else if update.InlineQuery != nil {
 
-			configureScope(update.Message.From, "inline-query", update.InlineQuery.Query)
+			configureScope(update.InlineQuery.From, "inline-query", update.InlineQuery.Query)
 
 			// this is inline query (it's like a suggestion while typing)
 			command.ProcessInlineQuery(bot, update.InlineQuery)
