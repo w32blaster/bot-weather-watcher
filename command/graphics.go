@@ -215,8 +215,10 @@ func printDetailedPlotsForADay(data []map[string]string, keyFromMap, unit string
 	}
 
 	// -1 because if all the values are the same, there is panic because of division by 0 inside asciigraph
-	lastIndex := len(temp3Hourly) - 1
-	temp3Hourly[lastIndex] = temp3Hourly[lastIndex] - 1
+	if allValuesTheSame(temp3Hourly) {
+		lastIndex := len(temp3Hourly) - 1
+		temp3Hourly[lastIndex] = temp3Hourly[lastIndex] + 0.1 // sorry...
+	}
 
 	graph := asciigraph.Plot(temp3Hourly)
 
@@ -251,4 +253,23 @@ func printDetailedPlotsForADay(data []map[string]string, keyFromMap, unit string
 
 func roundToTens(raw int) float64 {
 	return math.Round(float64(raw) / 10)
+}
+
+func allValuesTheSame(arr []float64) bool {
+
+	if len(arr) < 2 {
+		return false
+	}
+
+	for i, _ := range arr {
+		if i == 0 {
+			continue
+		}
+
+		if arr[i] != arr[i-1] {
+			return false
+		}
+	}
+
+	return true
 }
