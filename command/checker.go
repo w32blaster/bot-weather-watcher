@@ -40,6 +40,7 @@ func CheckWeather(bot *tgbotapi.BotAPI, opts *structs.Opts, userID int) bool {
 	wasFoundSomething := false
 	for _, loc := range locations {
 
+		sentry.CurrentHub().PushScope()
 		sentry.ConfigureScope(func(scope *sentry.Scope) {
 			scope.SetUser(sentry.User{
 				ID:       strconv.Itoa(loc.UserID),
@@ -104,6 +105,7 @@ func CheckWeather(bot *tgbotapi.BotAPI, opts *structs.Opts, userID int) bool {
 		}
 
 		buffer.Reset()
+		sentry.CurrentHub().PopScope()
 	}
 
 	return wasFoundSomething
