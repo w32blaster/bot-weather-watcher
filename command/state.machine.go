@@ -31,6 +31,7 @@ type (
 
 	StateMachine struct {
 		UserID       int
+		UserName     string
 		currentState int
 		db           *storm.DB
 		bot          *tgbotapi.BotAPI
@@ -103,6 +104,10 @@ var states = map[int]state{
 			sm.UpdateFieldInBookmark("LowestTemp", intMinTemp)
 			sm.markNextStepState(StepSpecifyDays)
 
+			if sm.bot == nil {
+				return // for unit tests
+			}
+
 			msg, _ := sendMsg(sm.bot, sm.chatID, "Desired temperature is saved. The last step, what days do you want to observe? \n"+
 				" - only weekend (makes sense if you at work during weekdays) \n"+
 				" - all days (when you have a vacation or you have flexible time schedule)?")
@@ -142,6 +147,9 @@ var states = map[int]state{
 			DeleteStateForUser(sm.db, sm.UserID)
 
 			// send message and hide keyboard shown on the last step
+			if sm.bot == nil {
+				return
+			}
 			msg := tgbotapi.NewMessage(sm.chatID, "All done, this location was saved for you")
 			msg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
 			sm.bot.Send(msg)
@@ -149,16 +157,17 @@ var states = map[int]state{
 	},
 }
 
-func LoadStateMachineFor(botApi *tgbotapi.BotAPI, chatID int64, userID int, stormDb *storm.DB) (*StateMachine, error) {
+func LoadStateMachineFor(botApi *tgbotapi.BotAPI, chatID int64, userID int, userName string, stormDb *storm.DB) (*StateMachine, error) {
 
 	sm := StateMachine{
-		UserID: userID,
-		db:     stormDb,
-		bot:    botApi,
-		chatID: chatID,
+		UserID:   userID,
+		UserName: userName,
+		db:       stormDb,
+		bot:      botApi,
+		chatID:   chatID,
 	}
 
-	currState, err := sm.loadState(userID)
+	currState, err := sm.loadState(sm.UserID)
 	if err != nil {
 		return nil, err
 	}

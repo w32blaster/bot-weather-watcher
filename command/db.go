@@ -16,6 +16,7 @@ func (sm *StateMachine) CreateNewBookmark(chatID int64) error {
 
 	return sm.db.Save(&structs.UsersLocationBookmark{
 		UserID:       sm.UserID,
+		UserName:     sm.UserName,
 		LocationID:   "",
 		LowestTemp:   0,
 		MaxWindSpeed: 0,

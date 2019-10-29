@@ -42,11 +42,14 @@ func CheckWeather(bot *tgbotapi.BotAPI, opts *structs.Opts, userID int) bool {
 
 		sentry.ConfigureScope(func(scope *sentry.Scope) {
 			scope.SetUser(sentry.User{
-				ID: strconv.Itoa(loc.UserID)})
+				ID:       strconv.Itoa(loc.UserID),
+				Username: loc.UserName,
+			})
 			scope.SetTag("action", "check-weather-nightly")
 			scope.SetExtra("location-id", loc.LocationID)
 			scope.SetExtra("location-name", mapLocs[loc.LocationID].Name)
 			scope.SetExtra("location-auth-area", mapLocs[loc.LocationID].AuthArea)
+			scope.RemoveExtra("raw-text")
 		})
 
 		forecast, err := getDailyForecastFor(loc.LocationID, opts)

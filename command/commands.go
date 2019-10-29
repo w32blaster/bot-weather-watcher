@@ -184,7 +184,7 @@ func StartProcessAddingNewLocation(bot *tgbotapi.BotAPI, message *tgbotapi.Messa
 	DeleteAllUnfinishedBookmarksForThisUser(db, message.From.ID)
 
 	// and now start a new state machine
-	sm, err := LoadStateMachineFor(bot, message.Chat.ID, message.From.ID, db)
+	sm, err := LoadStateMachineFor(bot, message.Chat.ID, message.From.ID, message.From.UserName, db)
 	if err != nil {
 		sentry.CaptureException(err)
 		sendMsg(bot, message.Chat.ID, "Sorry, internal error occurred, please trt again later")
@@ -215,7 +215,7 @@ func ProcessPlainText(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 		return
 	}
 
-	stateMachine, err := LoadStateMachineFor(bot, message.Chat.ID, message.From.ID, db)
+	stateMachine, err := LoadStateMachineFor(bot, message.Chat.ID, message.From.ID, message.From.UserName, db)
 	if err != nil {
 		sendMsg(bot, message.Chat.ID, "Ouch, this is internal error, sorry")
 		sentry.CaptureException(err)
@@ -270,7 +270,7 @@ func ProcessButtonCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 	} else if parts[0] == ButtonChoiceAllDaysOrWeekends {
 
 		// this is part of new location adding steps, where user should select "all days" or "only weekend"; so use state machine
-		stateMachine, err := LoadStateMachineFor(bot, callbackQuery.Message.Chat.ID, callbackQuery.From.ID, db)
+		stateMachine, err := LoadStateMachineFor(bot, callbackQuery.Message.Chat.ID, callbackQuery.From.ID, callbackQuery.From.UserName, db)
 		if err != nil {
 			sendMsg(bot, callbackQuery.Message.Chat.ID, "Ouch, this is internal error, sorry")
 			sentry.CaptureException(err)
@@ -470,6 +470,11 @@ func extractCommand(rawCommand string) string {
 
 // simply send a message to bot in Markdown format
 func sendMsg(bot *tgbotapi.BotAPI, chatID int64, textMarkdown string) (tgbotapi.Message, error) {
+
+	if bot == nil {
+		return tgbotapi.Message{}, errors.New("Bot was not set")
+	}
+
 	msg := tgbotapi.NewMessage(chatID, textMarkdown)
 	msg.ParseMode = "Markdown"
 	msg.DisableWebPagePreview = true
@@ -478,7 +483,6 @@ func sendMsg(bot *tgbotapi.BotAPI, chatID int64, textMarkdown string) (tgbotapi.
 	resp, err := bot.Send(msg)
 	if err != nil {
 		sentry.CaptureException(err)
-		return resp, err
 	}
 
 	return resp, err

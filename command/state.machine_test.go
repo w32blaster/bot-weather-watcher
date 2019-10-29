@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 )
 
@@ -14,6 +15,7 @@ const (
 	TestLocationID = "111"
 	UserID         = 111
 	User2ID        = 222
+	UserName       = "username"
 )
 
 func TestStateMachineStepByStep(t *testing.T) {
@@ -24,7 +26,7 @@ func TestStateMachineStepByStep(t *testing.T) {
 	defer db.Close()
 
 	// When:
-	sm, err := LoadStateMachineFor(nil, 1, UserID, db)
+	sm, err := LoadStateMachineFor(nil, 1, UserID, UserName, db)
 	assert.Nil(t, err)
 	assert.NotNil(t, sm)
 
@@ -55,6 +57,13 @@ func TestStateMachineStepByStep(t *testing.T) {
 	sm.ProcessNextState("10")
 
 	// then:
+	assert.Equal(t, StepSpecifyDays, sm.currentState)
+
+	// Step 5
+	// When:
+	sm.ProcessNextState(strconv.Itoa(onlyWeekends))
+
+	// then:
 	assert.Equal(t, FINISHED, sm.currentState)
 
 	// make sure we have only one saved (bookmarked) location in the database
@@ -79,7 +88,7 @@ func TestStateMachineForTwoUsers(t *testing.T) {
 	defer db.Close()
 
 	// State machine flow for user 1
-	sm, _ := LoadStateMachineFor(nil, 0, UserID, db)
+	sm, _ := LoadStateMachineFor(nil, 0, UserID, UserName, db)
 	sm.CreateNewBookmark(-1)
 	assert.Equal(t, StepEnterLocation, sm.currentState)
 
@@ -90,10 +99,13 @@ func TestStateMachineForTwoUsers(t *testing.T) {
 	assert.Equal(t, StepEnterMinTemp, sm.currentState)
 
 	sm.ProcessNextState("10")
+	assert.Equal(t, StepSpecifyDays, sm.currentState)
+
+	sm.ProcessNextState(strconv.Itoa(onlyWeekends))
 	assert.Equal(t, FINISHED, sm.currentState)
 
 	// Repeat the same for User 2
-	sm, _ = LoadStateMachineFor(nil, 0, User2ID, db)
+	sm, _ = LoadStateMachineFor(nil, 0, User2ID, UserName, db)
 	sm.CreateNewBookmark(-1)
 	assert.Equal(t, StepEnterLocation, sm.currentState)
 
@@ -104,6 +116,9 @@ func TestStateMachineForTwoUsers(t *testing.T) {
 	assert.Equal(t, StepEnterMinTemp, sm.currentState)
 
 	sm.ProcessNextState("5")
+	assert.Equal(t, StepSpecifyDays, sm.currentState)
+
+	sm.ProcessNextState(strconv.Itoa(onlyWeekends))
 	assert.Equal(t, FINISHED, sm.currentState)
 
 	// make sure we have two bookmarks in the database
@@ -135,7 +150,7 @@ func TestStateMachineForTwoUsersNotFinished(t *testing.T) {
 	defer db.Close()
 
 	// State machine flow for user 1
-	sm, _ := LoadStateMachineFor(nil, 1, UserID, db)
+	sm, _ := LoadStateMachineFor(nil, 1, UserID, UserName, db)
 	sm.CreateNewBookmark(-1)
 	assert.Equal(t, StepEnterLocation, sm.currentState)
 
@@ -146,10 +161,13 @@ func TestStateMachineForTwoUsersNotFinished(t *testing.T) {
 	assert.Equal(t, StepEnterMinTemp, sm.currentState)
 
 	sm.ProcessNextState("10")
+	assert.Equal(t, StepSpecifyDays, sm.currentState)
+
+	sm.ProcessNextState(strconv.Itoa(onlyWeekends))
 	assert.Equal(t, FINISHED, sm.currentState)
 
 	// Repeat the same for User 2
-	sm, _ = LoadStateMachineFor(nil, 1, User2ID, db)
+	sm, _ = LoadStateMachineFor(nil, 1, User2ID, UserName, db)
 	sm.CreateNewBookmark(-1)
 	assert.Equal(t, StepEnterLocation, sm.currentState)
 

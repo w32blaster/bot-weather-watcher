@@ -6,6 +6,9 @@ FROM golang as builder
 WORKDIR /app
 COPY . .
 
+# Run tests
+RUN make test
+
 # compile app
 RUN CGO_ENABLED=0 GOOS=linux go build \
     -a -installsuffix cgo \
