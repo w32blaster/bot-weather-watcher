@@ -217,11 +217,7 @@ func printDetailedPlotsForADay(data []map[string]string, keyFromMap, unit string
 	// -1 because if all the values are the same, there is panic because of division by 0 inside asciigraph
 	if allValuesTheSame(temp3Hourly) {
 		lastIndex := len(temp3Hourly) - 1
-		if isRound {
-			temp3Hourly[lastIndex] = temp3Hourly[lastIndex] + 10
-		} else {
-			temp3Hourly[lastIndex] = temp3Hourly[lastIndex] + 1
-		}
+		temp3Hourly[lastIndex] = temp3Hourly[lastIndex] + 1
 	}
 
 	graph := asciigraph.Plot(temp3Hourly)
@@ -247,7 +243,7 @@ func printDetailedPlotsForADay(data []map[string]string, keyFromMap, unit string
 		// for the current day the first temperature may be started not with 12:00am, but
 		// with current day and the bottom line should show only the rest of hours for current day/
 		// TODO: improve that and show proper hours left for today
-		buffer.WriteString("\n" + compensation + "    └┬──┬──┬──┬──┬──┬──┬──┬")
+		buffer.WriteString("\n" + compensation + "    └┬──┬──┬──┬──┬──┬──┬──┬──")
 		buffer.WriteString("\n" + compensation + "     0am   6am   12am  6pm")
 	}
 	buffer.WriteString("\n```\n")
