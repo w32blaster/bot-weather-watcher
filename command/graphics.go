@@ -197,7 +197,7 @@ func printDetailedPlotsForADay(data []map[string]string, keyFromMap, unit string
 		if intT, err := strconv.Atoi(mapHour[keyFromMap]); err != nil {
 			temp3Hourly[i*multiplier] = 0.0
 			temp3Hourly[(i*multiplier)+1] = 0.0
-			temp3Hourly[(i*multiplier)+2] = 0.1
+			temp3Hourly[(i*multiplier)+2] = 0.0
 		} else {
 			var fT float64
 			if isRound {
@@ -210,9 +210,14 @@ func printDetailedPlotsForADay(data []map[string]string, keyFromMap, unit string
 			}
 			temp3Hourly[i*multiplier] = fT
 			temp3Hourly[(i*multiplier)+1] = fT
-			temp3Hourly[(i*multiplier)+2] = fT - 1 // -1 because if all the values are the same, there is panic because of devision by 0 inside asciigraph
+			temp3Hourly[(i*multiplier)+2] = fT
 		}
 	}
+
+	// -1 because if all the values are the same, there is panic because of division by 0 inside asciigraph
+	lastIndex := len(temp3Hourly) - 1
+	temp3Hourly[lastIndex] = temp3Hourly[lastIndex] - 1
+
 	graph := asciigraph.Plot(temp3Hourly)
 
 	// one more dirty hack, I know...
