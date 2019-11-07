@@ -124,7 +124,8 @@ func logEventToSentry(loc structs.UsersLocationBookmark, day structs.Period, for
 	event.Level = sentry.LevelInfo
 	event.Extra = map[string]interface{}{
 		"date":                   day.Value,
-		"bookmark-owner":         loc.UserID,
+		"bookmark-owner-id":      loc.UserID,
+		"bookmark-owner":         loc.UserName,
 		"bookmark-location":      forecast.SiteRep.Dv.Location.Name,
 		"temp-feels-like":        feelsLikeDayTemp,
 		"temp-min-desired":       loc.LowestTemp,

@@ -189,10 +189,6 @@ func printDetailedPlotsForADay(data []map[string]string, keyFromMap, unit string
 
 	temp3Hourly := make([]float64, len(data)*multiplier)
 
-	// remember if a vertical axe has a long value (that is more than 2 symbols),
-	// this affects to the bottom line compensation
-	hasLongValue := false
-
 	for i, mapHour := range data {
 		if intT, err := strconv.Atoi(mapHour[keyFromMap]); err != nil {
 			temp3Hourly[i*multiplier] = 0.0
@@ -204,9 +200,6 @@ func printDetailedPlotsForADay(data []map[string]string, keyFromMap, unit string
 				fT = roundToTens(intT)
 			} else {
 				fT = float64(intT)
-			}
-			if fT >= 100 {
-				hasLongValue = true
 			}
 			temp3Hourly[i*multiplier] = fT
 			temp3Hourly[(i*multiplier)+1] = fT
@@ -230,23 +223,4 @@ func printDetailedPlotsForADay(data []map[string]string, keyFromMap, unit string
 
 func roundToTens(raw int) float64 {
 	return math.Round(float64(raw) / 10)
-}
-
-func allValuesTheSame(arr []float64) bool {
-
-	if len(arr) < 2 {
-		return false
-	}
-
-	for i, _ := range arr {
-		if i == 0 {
-			continue
-		}
-
-		if arr[i] != arr[i-1] {
-			return false
-		}
-	}
-
-	return true
 }
