@@ -2,7 +2,7 @@ package command
 
 import (
 	"bytes"
-	"github.com/guptarohit/asciigraph"
+	"github.com/w32blaster/asciigraph"
 	"github.com/w32blaster/bot-weather-watcher/structs"
 	"math"
 	"strconv"
@@ -214,38 +214,15 @@ func printDetailedPlotsForADay(data []map[string]string, keyFromMap, unit string
 		}
 	}
 
-	// -1 because if all the values are the same, there is panic because of division by 0 inside asciigraph
-	if allValuesTheSame(temp3Hourly) {
-		lastIndex := len(temp3Hourly) - 1
-		temp3Hourly[lastIndex] = temp3Hourly[lastIndex] + 1
-	}
-
-	graph := asciigraph.Plot(temp3Hourly)
-
-	// one more dirty hack, I know...
-	replacement := ""
-	if isRound {
-		// oh.... So, even if we round to ten's, asciigraph renders vertical scale for each percent,
-		// so 100 percent plot looks huge. And no way to safely shrimp it. I found a hack, that
-		// we round and divide by 10, having max plot with 10 lines, and then simply draw artificial "0"
-		// simulating multiplying by 10. Sorry :(
-		replacement = "0"
-	}
-	graph = strings.Replace(graph, ".00", replacement, -1)
-
+	graph, offset := asciigraph.Plot(temp3Hourly)
 	buffer.WriteString(graph)
+
 	if len(data) == 8 {
-		compensation := ""
-		if hasLongValue {
-			compensation = " "
-		}
-		// draw the bottom line only if the day forecast is full:
-		// for the current day the first temperature may be started not with 12:00am, but
-		// with current day and the bottom line should show only the rest of hours for current day/
-		// TODO: improve that and show proper hours left for today
-		buffer.WriteString("\n" + compensation + "    └┬──┬──┬──┬──┬──┬──┬──┬──")
-		buffer.WriteString("\n" + compensation + "     0am   6am   12am  6pm")
+		buffer.WriteRune('\n')
+		buffer.WriteString(strings.Repeat(" ", offset))
+		buffer.WriteString("     0am   6am   12am  6pm")
 	}
+
 	buffer.WriteString("\n```\n")
 
 	return buffer.String()
