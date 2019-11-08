@@ -16,7 +16,7 @@ require (
 	github.com/stretchr/testify v1.4.0
 	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
-	github.com/w32blaster/asciigraph v0.4.2
+	github.com/w32blaster/asciigraph v0.4.3
 	go.etcd.io/bbolt v1.3.3 // indirect
 	golang.org/x/net v0.0.0-20191007182048-72f939374954 // indirect
 	golang.org/x/sys v0.0.0-20191007154456-ef33b2fb2c41 // indirect

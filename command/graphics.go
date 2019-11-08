@@ -213,7 +213,7 @@ func printDetailedPlotsForADay(data []map[string]string, keyFromMap, unit string
 	if len(data) == 8 {
 		buffer.WriteRune('\n')
 		buffer.WriteString(strings.Repeat(" ", offset))
-		buffer.WriteString("     0am   6am   12am  6pm")
+		buffer.WriteString("0am   6am   12am  6pm")
 	}
 
 	buffer.WriteString("\n```\n")
